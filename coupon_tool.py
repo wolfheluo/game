@@ -187,10 +187,15 @@ class CouponApp:
         self._config = self._load_config()
         self._last_dir = self._config.get("last_dir", str(RECENT_DIR))
 
+        # ── Theme ──
+        theme_name = self._config.get("theme", "light")
+        self.theme = tk.StringVar(value=theme_name)
+        self._log_widget = None  # set by _build_log
+        self._editor_txt = None  # set by _open_editor
+
         # ── Style ──
         style = ttk.Style()
-        # Sun Valley light theme — modern rounded UI
-        sv_ttk.set_theme("light")
+        sv_ttk.set_theme(theme_name)
 
         # ── Font setup ──
         style.configure(".", font=(FONT_FAMILY, 10))
@@ -230,6 +235,9 @@ class CouponApp:
         self._build_table()
         self._build_controls()
         self._build_log()
+
+        # Apply theme colors to non-ttk widgets
+        self._apply_theme_colors(theme_name)
 
         # Poll queue for UI updates
         self._poll_queue()
@@ -334,6 +342,13 @@ class CouponApp:
         self.btn_export = ttk.Button(frm, text="📤 匯出結果", command=self._export)
         self.btn_export.pack(side=tk.RIGHT, padx=4)
 
+        # Theme toggle
+        self.btn_theme = ttk.Checkbutton(frm, text="🌙 深色模式",
+                                         variable=self.theme,
+                                         onvalue="dark", offvalue="light",
+                                         command=self._toggle_theme)
+        self.btn_theme.pack(side=tk.RIGHT, padx=(12, 2))
+
         # Worker count
         ttk.Label(frm, text="併發:").pack(side=tk.RIGHT, padx=(12, 2))
         saved_workers = self._config.get("worker_count", DEFAULT_WORKERS)
@@ -353,6 +368,7 @@ class CouponApp:
                                              font=(FONT_FAMILY, 10), bg="#ffffff",
                                              fg="#000000", insertbackground="#000000",
                                              relief="flat", borderwidth=0)
+        self._log_widget = self.log
         self.log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Clear button
@@ -702,11 +718,59 @@ class CouponApp:
         self._config["last_dir"] = self._last_dir
         self._config["worker_count"] = self.worker_count.get()
         self._config["mode"] = self.mode.get()
+        self._config["theme"] = self.theme.get()
         try:
             with open(CONFIG_FILE, "wb") as f:
                 pickle.dump(self._config, f)
         except Exception:
             pass
+
+    # ── Theme toggle ──
+
+    def _apply_theme_colors(self, theme_name: str):
+        """Apply dark/light colors to non-ttk widgets (root, log, editor)."""
+        if theme_name == "dark":
+            root_bg = "#1c1c1c"
+            txt_bg  = "#2b2b2b"
+            txt_fg  = "#e0e0e0"
+            lbl_fg  = "#e0e0e0"
+            gray_fg = "#888888"
+        else:
+            root_bg = "#f0f0f0"
+            txt_bg  = "#ffffff"
+            txt_fg  = "#000000"
+            lbl_fg  = "#000000"
+            gray_fg = "#555555"
+
+        self.root.configure(bg=root_bg)
+
+        # Update log widget if built
+        if self._log_widget:
+            self._log_widget.configure(bg=txt_bg, fg=txt_fg, insertbackground=txt_fg)
+
+        # Update log count label
+        if hasattr(self, 'lbl_log_count'):
+            self.lbl_log_count.configure(foreground=gray_fg)
+
+        # Update file labels
+        if hasattr(self, 'lbl_monarch'):
+            self.lbl_monarch.configure(foreground=lbl_fg)
+        if hasattr(self, 'lbl_serial'):
+            self.lbl_serial.configure(foreground=lbl_fg)
+
+        # Update editor if open
+        if self._editor_txt:
+            try:
+                self._editor_txt.configure(bg=txt_bg, fg=txt_fg, insertbackground=txt_fg)
+            except tk.TclError:
+                pass  # editor closed
+
+    def _toggle_theme(self):
+        new_theme = "dark" if self.theme.get() == "light" else "light"
+        self.theme.set(new_theme)
+        sv_ttk.set_theme(new_theme)
+        self._apply_theme_colors(new_theme)
+        self._save_config()
 
     def _on_close(self):
         self._save_config()
@@ -726,6 +790,11 @@ class CouponApp:
                                         bg="#ffffff", fg="#000000",
                                         insertbackground="#000000",
                                         relief="flat", borderwidth=0)
+        self._editor_txt = txt
+        # Apply current theme
+        if self.theme.get() == "dark":
+            txt.configure(bg="#2b2b2b", fg="#e0e0e0", insertbackground="#e0e0e0")
+            win.configure(bg="#1c1c1c")
         txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
         txt.insert("1.0", "\n".join(current_lines))
 
