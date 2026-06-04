@@ -182,37 +182,38 @@ startBtn.addEventListener('click', async () => {
   addDebugLog(`序號數量：${serials.length}`);
 
   // 獲取當前活動標籤頁
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
-  if (!tab) {
-    addLog('❌ 錯誤：無法獲取當前標籤頁', 'error');
-    addDebugLog('錯誤：無法獲取當前標籤頁');
-    resetUI();
-    return;
-  }
+  // if (!tab) {
+  //   addLog('❌ 錯誤：無法獲取當前標籤頁', 'error');
+  //   addDebugLog('錯誤：無法獲取當前標籤頁');
+  //   resetUI();
+  //   return;
+  // }
   
-  addDebugLog(`當前頁面：${tab.url}`);
+  // addDebugLog(`當前頁面：${tab.url}`);
   
-  // 先檢查頁面結構
-  addDebugLog('正在檢查頁面結構...');
-  try {
-    const pageCheckResult = await checkPageStructure(tab.id);
-    if (pageCheckResult.success) {
-      addDebugLog('頁面結構檢查完成', pageCheckResult.pageInfo);
-      // 不在 UI 顯示詳細頁面檢查結果
-    }
-  } catch (error) {
-    addLog(`❌ 頁面檢查失敗: ${error.message}`, 'error');
-    addDebugLog(`頁面檢查失敗: ${error.message}`, error);
-    resetUI();
-    return;
-  }
+  // // 先檢查頁面結構
+  // addDebugLog('正在檢查頁面結構...');
+  // try {
+  //   const pageCheckResult = await checkPageStructure(tab.id);
+  //   if (pageCheckResult.success) {
+  //     addDebugLog('頁面結構檢查完成', pageCheckResult.pageInfo);
+  //     // 不在 UI 顯示詳細頁面檢查結果
+  //   }
+  // } catch (error) {
+  //   addLog(`❌ 頁面檢查失敗: ${error.message}`, 'error');
+  //   addDebugLog(`頁面檢查失敗: ${error.message}`, error);
+  //   resetUI();
+  //   return;
+  // }
 
   // 執行任務
+  // 因為不再需要與頁面互動，所以 tab.id 已經不需要了
   if (mode === 'oneToOne') {
-    await executeOneToOne(tab.id);
+    await executeOneToOne();
   } else {
-    await executeShared(tab.id);
+    await executeShared();
   }
 });
 
@@ -260,10 +261,8 @@ clearBtn.addEventListener('click', async () => {
   }
 });
 
-// 前往兌換頁面
-openWebBtn.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://coupon.kingdom-story.com/lang/zh-TW' });
-});
+// 前往兌換頁面按鈕不再需要，可以隱藏或刪除
+openWebBtn.style.display = 'none';
 
 // Debug Log 開關
 debugLogToggle.addEventListener('change', () => {
@@ -306,7 +305,7 @@ function autoExportLog() {
 }
 
 // 一對一模式
-async function executeOneToOne(tabId) {
+async function executeOneToOne() {
   const total = monarchs.length;
   let successCount = 0;
   let errorCount = 0;
@@ -326,24 +325,22 @@ async function executeOneToOne(tabId) {
     addDebugLog(`[${i + 1}/${total}] 開始處理 - 主公：${monarch} | 序號：${serial}`);
 
     try {
-      const response = await fillAndSubmit(tabId, monarch, serial);
+      const response = await fillAndSubmit(monarch, serial);
       successCount++;
       
-      // UI 只顯示簡潔的成功信息
       addLog(`✅ ${monarch} 成功使用 ${serial}`, 'success');
-      addDebugLog(`[${i + 1}/${total}] 成功 - 網站回應: ${JSON.stringify(response.response)}`);
+      addDebugLog(`[${i + 1}/${total}] 成功 - 伺服器回應: ${JSON.stringify(response)}`);
     } catch (error) {
       errorCount++;
       
-      // UI 只顯示簡潔的失敗信息和原因
       const errorReason = error.message || '未知錯誤';
       addLog(`❌ ${monarch} 使用 ${serial} 失敗: ${errorReason}`, 'error');
       addDebugLog(`[${i + 1}/${total}] 失敗 - ${error.message}`, error);
     }
 
-    // 延遲 2 秒
+    // 延遲
     if (i < total - 1 && !shouldStop) {
-      await sleep(2000);
+      await sleep(500); // 可以縮短延遲
     }
   }
 
@@ -356,7 +353,7 @@ async function executeOneToOne(tabId) {
 }
 
 // 共用模式
-async function executeShared(tabId) {
+async function executeShared() {
   const totalTasks = monarchs.length * serials.length;
   let taskIndex = 0;
   let successCount = 0;
@@ -383,24 +380,22 @@ async function executeShared(tabId) {
       addDebugLog(`[${taskIndex}/${totalTasks}] 開始處理 - 主公：${monarch} | 序號：${serial}`);
 
       try {
-        const response = await fillAndSubmit(tabId, monarch, serial);
+        const response = await fillAndSubmit(monarch, serial);
         successCount++;
         
-        // UI 只顯示簡潔的成功信息
         addLog(`✅ ${monarch} 成功使用 ${serial}`, 'success');
-        addDebugLog(`[${taskIndex}/${totalTasks}] 成功 - 網站回應: ${JSON.stringify(response.response)}`);
+        addDebugLog(`[${taskIndex}/${totalTasks}] 成功 - 伺服器回應: ${JSON.stringify(response)}`);
       } catch (error) {
         errorCount++;
         
-        // UI 只顯示簡潔的失敗信息和原因
         const errorReason = error.message || '未知錯誤';
         addLog(`❌ ${monarch} 使用 ${serial} 失敗: ${errorReason}`, 'error');
         addDebugLog(`[${taskIndex}/${totalTasks}] 失敗 - ${error.message}`, error);
       }
 
-      // 延遲 2 秒
+      // 延遲
       if (taskIndex < totalTasks && !shouldStop) {
-        await sleep(2000);
+        await sleep(500); // 可以縮短延遲
       }
     }
   }
@@ -413,144 +408,65 @@ async function executeShared(tabId) {
   resetUI();
 }
 
-// 檢查頁面結構
-async function checkPageStructure(tabId) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(
-      tabId,
-      { action: 'checkPage' },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error('無法與頁面通訊: ' + chrome.runtime.lastError.message));
-        } else if (response && response.success) {
-          resolve(response);
-        } else {
-          reject(new Error('頁面檢查失敗'));
-        }
-      }
-    );
-  });
+// 錯誤代碼轉換
+function getErrorMessage(code) {
+  const errorMap = {
+    "0": "道具已發送。請於遊戲內信箱確認。",
+    "11": "語言錯誤",
+    "21": "服務器錯誤",
+    "31": "主公名稱輸入錯誤。",
+    "32": "該帳戶已退出",
+    "72": "已使用過的虛寶序號。",
+    "81": "無更多兌換碼",
+    "82": "兌換碼過期",
+    "84": "錯誤的虛寶序號。",
+    "98": "Please access from the coupon page.",
+    "99": "其他錯誤",
+  };
+  return errorMap[code] || `未知的錯誤代碼 (${code})`;
 }
 
-// 實際發送 fillForm 訊息（單次）
-function sendFillFormMessage(tabId, monarch, serial) {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(
-      tabId,
-      {
-        action: 'fillForm',
-        monarch: monarch,
-        serial: serial,
-        server: '10' // 天下爭霸
+
+// 直接發送 POST 請求
+async function fillAndSubmit(monarch, serial) {
+  const url = 'https://coupon.kingdom-story.com/register-coupon';
+  const body = new URLSearchParams({
+    server: '10', // 天下爭霸
+    monarch: monarch,
+    serialcode: serial
+  });
+
+  try {
+    addDebugLog(`發送請求至 ${url}`, { monarch, serial });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          const errorMsg = chrome.runtime.lastError.message || '';
-          addDebugLog(`Chrome 錯誤: ${errorMsg}`);
-          if (errorMsg.includes('message channel closed')) {
-            // channel 關閉但 content script 還在跑（等待 modal），輪詢 storage
-            reject(new Error('__WAIT_STORAGE__'));
-          } else if (errorMsg.includes('Receiving end does not exist') ||
-                     errorMsg.includes('Cannot establish connection')) {
-            // content script 完全不存在，重注入
-            reject(new Error('__REINJECT__'));
-          } else {
-            reject(new Error('無法與頁面通訊'));
-          }
-        } else if (response && response.success) {
-          if (response.log && response.log.length > 0) {
-            response.log.forEach(log => addDebugLog(`  ${log}`));
-          }
-          resolve(response);
-        } else {
-          if (response && response.log && response.log.length > 0) {
-            response.log.forEach(log => addDebugLog(`  ${log}`));
-          }
-          const errorMsg = response?.error || '未知錯誤';
-          if (response && response.response) {
-            if (response.response.source === 'modal') {
-              addDebugLog(`  ❌ 最終結果: 錯誤彈窗 - ${response.response.message}`);
-            } else if (response.response.code) {
-              addDebugLog(`  ❌ 最終結果: 錯誤代碼 ${response.response.code}`);
-            }
-          } else {
-            addDebugLog(`  ❌ 最終結果: ${errorMsg}`);
-          }
-          reject(new Error(errorMsg));
-        }
-      }
-    );
-  });
-}
-
-// 輪詢 DOM 元素，等待 content script 寫入結果（最多 pollMs 毫秒）
-async function pollDOMResult(tabId, monarch, serial, pollMs = 5000) {
-  const interval = 400;
-  const deadline = Date.now() + pollMs;
-  while (Date.now() < deadline) {
-    await sleep(interval);
-    try {
-      const results = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          const el = document.getElementById('__ext_fill_result__');
-          return el ? el.getAttribute('data-fill') : null;
-        }
-      });
-      const raw = results?.[0]?.result;
-      if (raw) {
-        const r = JSON.parse(raw);
-        if (r && r.monarch === monarch && r.serial === serial && (Date.now() - r.ts) < 15000) {
-          addDebugLog(`⚠ Channel 關閉，從 DOM 取得結果 (success=${r.success})`);
-          if (r.log && r.log.length > 0) r.log.forEach(l => addDebugLog(`  ${l}`));
-          return r;
-        }
-      }
-    } catch (e) {
-      // executeScript 失敗時繼續輪詢
-    }
-  }
-  return null; // 超時
-}
-
-// 填寫並提交表單
-async function fillAndSubmit(tabId, monarch, serial) {
-  // 清除上次暫存的 DOM 結果，避免讀到舊結果
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const el = document.getElementById('__ext_fill_result__');
-        if (el) el.removeAttribute('data-fill');
-      }
+      body: body.toString()
     });
-  } catch (e) {}
-  try {
-    return await sendFillFormMessage(tabId, monarch, serial);
+
+    if (!response.ok) {
+      addDebugLog(`請求失敗，HTTP 狀態碼: ${response.status}`);
+      throw new Error(`伺服器錯誤 (HTTP ${response.status})`);
+    }
+
+    const data = await response.json();
+    addDebugLog('收到伺服器回應', data);
+
+    if (data.code === 0) {
+      return data; // 成功
+    } else {
+      throw new Error(getErrorMessage(data.code));
+    }
   } catch (error) {
-    if (error.message === '__WAIT_STORAGE__') {
-      // content script 還在跑，輪詢 DOM 最多 5 秒
-      addDebugLog('⚠ Channel 關閉，輪詢 DOM 等待 content script 寫入結果...');
-      const r = await pollDOMResult(tabId, monarch, serial, 5000);
-      if (r) {
-        if (r.success) return r;
-        throw new Error(r.error || '未知錯誤');
-      }
-      // 5 秒內都沒有 → 重注入後重試
-      addDebugLog('⚠ 輪詢逾時，重新注入 content script 後重試...');
-      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
-      await sleep(800);
-      addDebugLog('✓ 重新注入完成，重試中...');
-      return await sendFillFormMessage(tabId, monarch, serial);
+    addDebugLog(`請求捕獲到錯誤: ${error.message}`, error);
+    // 如果是網路錯誤，error.message 會更通用
+    if (error instanceof TypeError) {
+        throw new Error('網路錯誤，無法連接到伺服器');
     }
-    if (error.message === '__REINJECT__') {
-      // content script 完全不存在，重注入重試
-      addDebugLog('⚠ Content script 不存在，重新注入後重試...');
-      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
-      await sleep(800);
-      addDebugLog('✓ 重新注入完成，重試中...');
-      return await sendFillFormMessage(tabId, monarch, serial);
-    }
+    // 否則，拋出已處理的錯誤訊息
     throw error;
   }
 }
