@@ -387,34 +387,52 @@ class CouponApp:
     def _read_lines(path: str) -> list[str]:
         with open(path, "r", encoding="utf-8") as f:
             encoded = f.read()
-        # Try big5 if utf-8 fails to make sense
-        return [ln.strip() for ln in encoded.splitlines() if ln.strip()]
+        lines = [ln.strip() for ln in encoded.splitlines() if ln.strip()]
+        # Dedup preserving order
+        seen = set()
+        unique = []
+        for ln in lines:
+            if ln not in seen:
+                seen.add(ln)
+                unique.append(ln)
+        return unique
 
     # ── Generation ──
 
     def _generate_tasks(self):
-        """根据模式生成任务列表。"""
+        """根据模式生成任务列表，自動移除重複的 (monarch, serialcode) 組合。"""
         self.tasks.clear()
         tasks = []
+        seen: set[tuple[str, str]] = set()
+        dupes = 0
 
         if self.mode.get() == "one2one":
-            # 一對一：依序配對
             limit = max(len(self.monarchs), len(self.serialcodes))
             for i in range(limit):
                 m = self.monarchs[i] if i < len(self.monarchs) else ""
                 s = self.serialcodes[i] if i < len(self.serialcodes) else ""
                 if m and s:
-                    tasks.append(CouponTask(monarch=m, serialcode=s, row_idx=i))
+                    pair = (m, s)
+                    if pair in seen:
+                        dupes += 1
+                        continue
+                    seen.add(pair)
+                    tasks.append(CouponTask(monarch=m, serialcode=s, row_idx=len(tasks)))
         else:
-            # 共用：所有主公共用一個序號，用完換下一個
-            idx = 0
             for s in self.serialcodes:
                 for m in self.monarchs:
-                    tasks.append(CouponTask(monarch=m, serialcode=s, row_idx=idx))
-                    idx += 1
+                    pair = (m, s)
+                    if pair in seen:
+                        dupes += 1
+                        continue
+                    seen.add(pair)
+                    tasks.append(CouponTask(monarch=m, serialcode=s, row_idx=len(tasks)))
 
         self.tasks = tasks
-        self._log(f"📋 生成 {len(tasks)} 個任務 (模式: {'一對一' if self.mode.get() == 'one2one' else '共用'})")
+        log = f"📋 生成 {len(tasks)} 個任務 (模式: {'一對一' if self.mode.get() == 'one2one' else '共用'})"
+        if dupes:
+            log += f" — 已自動移除 {dupes} 個重複組合"
+        self._log(log)
 
     def _populate_table(self):
         self.tree.delete(*self.tree.get_children())
