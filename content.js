@@ -36,10 +36,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         log('開始填寫表單', { monarch: request.monarch, serial: request.serial, server: request.server });
         const result = await fillFormAndSubmit(request.monarch, request.serial, request.server);
         logSuccess('表單填寫完成');
-        sendResponse({ success: true, log: result.log, response: result.response });
+        const payload = { success: true, log: result.log, response: result.response };
+        // 寫入 DOM 元素，不依賴 Chrome API，就算 context 失效也能寫入
+        writeFillResultToDOM({ ...payload, monarch: request.monarch, serial: request.serial, ts: Date.now() });
+        sendResponse(payload);
       } catch (error) {
         logError('表單填寫失敗', error);
-        sendResponse({ success: false, error: error.message, log: error.log || [], response: lastResponse });
+        const payload = { success: false, error: error.message, log: error.log || [], response: lastResponse };
+        writeFillResultToDOM({ ...payload, monarch: request.monarch, serial: request.serial, ts: Date.now() });
+        sendResponse(payload);
       }
     })();
     return true; // 保持訊息通道開啟
@@ -273,25 +278,44 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
   }
 }
 
+// 將結果寫入頁面 DOM（不依賴 Chrome API，就算 extension context 失效也能寫入）
+function writeFillResultToDOM(data) {
+  try {
+    let marker = document.getElementById('__ext_fill_result__');
+    if (!marker) {
+      marker = document.createElement('div');
+      marker.id = '__ext_fill_result__';
+      marker.style.display = 'none';
+      document.body.appendChild(marker);
+    }
+    marker.setAttribute('data-fill', JSON.stringify(data));
+  } catch (e) {
+    // DOM 寫入失敗時静默失敗，不影響主流程
+  }
+}
+
 // 檢查網站彈窗並立即關閉，透過 classList 動態判斷類型
+// 用 querySelectorAll + getComputedStyle 避免誤抓隱藏中的另一個 modal
 function checkAndCloseModal() {
-  const modal = document.querySelector('.serialModalArea.js-serial-modal');
-  if (modal && modal.style.display !== 'none') {
+  const modals = document.querySelectorAll('.serialModalArea.js-serial-modal');
+  for (const modal of modals) {
+    // 用計算樣式判斷是否真正可見，避免 inline style 為空時的誤判
+    const computed = window.getComputedStyle(modal);
+    if (computed.display === 'none' || computed.visibility === 'hidden') continue;
+
     const isSuccess = modal.classList.contains('success');
     const isError = modal.classList.contains('error');
-    
-    if (!isSuccess && !isError) return { type: null, message: null };
-    
+    if (!isSuccess && !isError) continue;
+
     const messageEl = modal.querySelector('.js-modal-message');
     const message = messageEl ? messageEl.textContent.trim() : '';
-    
-    // 立即點擊關閉按鈕
+
     const closeBtn = modal.querySelector('.js-modal-btn');
     if (closeBtn) {
       log(`🔘 檢測到${isSuccess ? '成功' : '錯誤'}彈窗，立即關閉`);
       closeBtn.click();
     }
-    
+
     return { type: isSuccess ? 'success' : 'error', message };
   }
   return { type: null, message: null };

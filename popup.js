@@ -432,8 +432,8 @@ async function checkPageStructure(tabId) {
   });
 }
 
-// 填寫並提交表單
-async function fillAndSubmit(tabId, monarch, serial) {
+// 實際發送 fillForm 訊息（單次）
+function sendFillFormMessage(tabId, monarch, serial) {
   return new Promise((resolve, reject) => {
     chrome.tabs.sendMessage(
       tabId,
@@ -445,37 +445,27 @@ async function fillAndSubmit(tabId, monarch, serial) {
       },
       (response) => {
         if (chrome.runtime.lastError) {
-          // 檢查是否是本地文件權限問題
           const errorMsg = chrome.runtime.lastError.message || '';
           addDebugLog(`Chrome 錯誤: ${errorMsg}`);
-          if (errorMsg.includes('Cannot access') || errorMsg.includes('Receiving end does not exist')) {
-            reject(new Error('無法與頁面通訊'));
+          if (errorMsg.includes('message channel closed')) {
+            // channel 關閉但 content script 還在跑（等待 modal），輪詢 storage
+            reject(new Error('__WAIT_STORAGE__'));
+          } else if (errorMsg.includes('Receiving end does not exist') ||
+                     errorMsg.includes('Cannot establish connection')) {
+            // content script 完全不存在，重注入
+            reject(new Error('__REINJECT__'));
           } else {
             reject(new Error('無法與頁面通訊'));
           }
         } else if (response && response.success) {
-          // 記錄詳細日誌到 debug
           if (response.log && response.log.length > 0) {
             response.log.forEach(log => addDebugLog(`  ${log}`));
           }
-          
-          // UI 只顯示簡潔結果
-          if (response.response) {
-            if (response.response.code === 0) {
-              // 成功 - 不顯示，由調用方顯示
-            } else if (response.response.code === -1 && response.response.source === 'modal') {
-              // 來自錯誤彈窗的訊息 - 不顯示，由調用方顯示
-            } else if (response.response.code) {
-              // 其他錯誤代碼 - 不顯示，由調用方顯示
-            }
-          }
           resolve(response);
         } else {
-          // 記錄詳細日誌到 debug（即使失敗，執行步驟也是正常的）
           if (response && response.log && response.log.length > 0) {
             response.log.forEach(log => addDebugLog(`  ${log}`));
           }
-          // 檢查是否有錯誤代碼或錯誤彈窗
           const errorMsg = response?.error || '未知錯誤';
           if (response && response.response) {
             if (response.response.source === 'modal') {
@@ -491,6 +481,78 @@ async function fillAndSubmit(tabId, monarch, serial) {
       }
     );
   });
+}
+
+// 輪詢 DOM 元素，等待 content script 寫入結果（最多 pollMs 毫秒）
+async function pollDOMResult(tabId, monarch, serial, pollMs = 5000) {
+  const interval = 400;
+  const deadline = Date.now() + pollMs;
+  while (Date.now() < deadline) {
+    await sleep(interval);
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => {
+          const el = document.getElementById('__ext_fill_result__');
+          return el ? el.getAttribute('data-fill') : null;
+        }
+      });
+      const raw = results?.[0]?.result;
+      if (raw) {
+        const r = JSON.parse(raw);
+        if (r && r.monarch === monarch && r.serial === serial && (Date.now() - r.ts) < 15000) {
+          addDebugLog(`⚠ Channel 關閉，從 DOM 取得結果 (success=${r.success})`);
+          if (r.log && r.log.length > 0) r.log.forEach(l => addDebugLog(`  ${l}`));
+          return r;
+        }
+      }
+    } catch (e) {
+      // executeScript 失敗時繼續輪詢
+    }
+  }
+  return null; // 超時
+}
+
+// 填寫並提交表單
+async function fillAndSubmit(tabId, monarch, serial) {
+  // 清除上次暫存的 DOM 結果，避免讀到舊結果
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const el = document.getElementById('__ext_fill_result__');
+        if (el) el.removeAttribute('data-fill');
+      }
+    });
+  } catch (e) {}
+  try {
+    return await sendFillFormMessage(tabId, monarch, serial);
+  } catch (error) {
+    if (error.message === '__WAIT_STORAGE__') {
+      // content script 還在跑，輪詢 DOM 最多 5 秒
+      addDebugLog('⚠ Channel 關閉，輪詢 DOM 等待 content script 寫入結果...');
+      const r = await pollDOMResult(tabId, monarch, serial, 5000);
+      if (r) {
+        if (r.success) return r;
+        throw new Error(r.error || '未知錯誤');
+      }
+      // 5 秒內都沒有 → 重注入後重試
+      addDebugLog('⚠ 輪詢逾時，重新注入 content script 後重試...');
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+      await sleep(800);
+      addDebugLog('✓ 重新注入完成，重試中...');
+      return await sendFillFormMessage(tabId, monarch, serial);
+    }
+    if (error.message === '__REINJECT__') {
+      // content script 完全不存在，重注入重試
+      addDebugLog('⚠ Content script 不存在，重新注入後重試...');
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+      await sleep(800);
+      addDebugLog('✓ 重新注入完成，重試中...');
+      return await sendFillFormMessage(tabId, monarch, serial);
+    }
+    throw error;
+  }
 }
 
 // 更新進度
