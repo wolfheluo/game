@@ -350,9 +350,17 @@ class CouponApp:
         if path:
             self._last_dir = os.path.dirname(path)
             self._save_config()
-            self.monarchs = self._read_lines(path)
+            raw = self._read_lines(path)
+            deduped = []
+            seen_m = set()
+            for ln in raw:
+                if ln not in seen_m:
+                    seen_m.add(ln)
+                    deduped.append(ln)
+            self.monarchs = deduped
+            dedup_msg = f" (已去重 {len(raw) - len(deduped)} 筆)" if len(raw) != len(deduped) else ""
             self.lbl_monarch.config(text=f"{path} ({len(self.monarchs)} 筆)", foreground="black")
-            self._log(f"📂 載入 monarch: {len(self.monarchs)} 筆")
+            self._log(f"📂 載入 monarch: {len(self.monarchs)} 筆{dedup_msg}")
 
     def _load_serial(self):
         path = filedialog.askopenfilename(
@@ -387,15 +395,7 @@ class CouponApp:
     def _read_lines(path: str) -> list[str]:
         with open(path, "r", encoding="utf-8") as f:
             encoded = f.read()
-        lines = [ln.strip() for ln in encoded.splitlines() if ln.strip()]
-        # Dedup preserving order
-        seen = set()
-        unique = []
-        for ln in lines:
-            if ln not in seen:
-                seen.add(ln)
-                unique.append(ln)
-        return unique
+        return [ln.strip() for ln in encoded.splitlines() if ln.strip()]
 
     # ── Generation ──
 
