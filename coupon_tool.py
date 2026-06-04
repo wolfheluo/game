@@ -41,6 +41,7 @@ JITTER_MAX = 0.8        # random delay max
 MAX_RETRIES = 2         # auto-retry on network error
 CONFIG_FILE = Path.home() / ".coupon_tool_config.pkl"
 RECENT_DIR = Path.home()
+FONT_FAMILY = "Microsoft JhengHei UI" # 字型設定
 
 # ── Error code mapping ──
 CODE_MESSAGES = {
@@ -190,16 +191,23 @@ class CouponApp:
         style = ttk.Style()
         # Sun Valley light theme — modern rounded UI
         sv_ttk.set_theme("light")
+
+        # ── Font setup ──
+        style.configure(".", font=(FONT_FAMILY, 10))
+        style.configure("TLabel", font=(FONT_FAMILY, 10))
+        style.configure("TButton", font=(FONT_FAMILY, 10))
+        style.configure("TRadiobutton", font=(FONT_FAMILY, 10))
+
         # Custom accent color
-        style.configure("Accent.TButton", font=("", 11, "bold"))
-        style.configure("Title.TLabel", font=("", 14, "bold"))
-        style.configure("Heading.TLabel", font=("", 10, "bold"))
+        style.configure("Accent.TButton", font=(FONT_FAMILY, 11, "bold"))
+        style.configure("Title.TLabel", font=(FONT_FAMILY, 14, "bold"))
+        style.configure("Heading.TLabel", font=(FONT_FAMILY, 10, "bold"))
         style.configure("Success.TLabel", foreground="#4caf50")
         style.configure("Failed.TLabel", foreground="#f44336")
-        style.configure("Big.TButton", font=("", 12, "bold"))
+        style.configure("Big.TButton", font=(FONT_FAMILY, 12, "bold"))
         # Card-like frames
         style.configure("Card.TLabelframe", relief="solid", borderwidth=0)
-        style.configure("Card.TLabelframe.Label", font=("", 10, "bold"))
+        style.configure("Card.TLabelframe.Label", font=(FONT_FAMILY, 10, "bold"))
 
         # ── Data ──
         self.monarchs: list[str] = []
@@ -271,8 +279,8 @@ class CouponApp:
         # Treeview
         cols = ("#", "monarch", "serialcode", "status", "message")
         style = ttk.Style()
-        style.configure("Tasks.Treeview", rowheight=28, font=("", 10))
-        style.configure("Tasks.Treeview.Heading", font=("", 10, "bold"))
+        style.configure("Tasks.Treeview", rowheight=28, font=(FONT_FAMILY, 10))
+        style.configure("Tasks.Treeview.Heading", font=(FONT_FAMILY, 10, "bold"))
         self.tree = ttk.Treeview(frm, columns=cols, show="headings", height=8,
                                  style="Tasks.Treeview")
         self.tree.heading("#", text="#")
@@ -342,7 +350,7 @@ class CouponApp:
         log_frame.pack(fill=tk.BOTH, expand=True)
 
         self.log = scrolledtext.ScrolledText(log_frame, height=6, wrap=tk.WORD,
-                                             font=("Consolas", 10), bg="#ffffff",
+                                             font=(FONT_FAMILY, 10), bg="#ffffff",
                                              fg="#000000", insertbackground="#000000",
                                              relief="flat", borderwidth=0)
         self.log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -714,7 +722,7 @@ class CouponApp:
         win.transient(self.root)
         win.grab_set()
 
-        txt = scrolledtext.ScrolledText(win, font=("Consolas", 11), wrap=tk.WORD,
+        txt = scrolledtext.ScrolledText(win, font=(FONT_FAMILY, 11), wrap=tk.WORD,
                                         bg="#ffffff", fg="#000000",
                                         insertbackground="#000000",
                                         relief="flat", borderwidth=0)
