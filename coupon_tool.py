@@ -179,8 +179,8 @@ class CouponApp:
         self.root.title("三國萌萌打 兌換碼工具 v2.2")
         self.root.geometry("980x720")
         self.root.minsize(860, 560)
-        # Dark window background
-        self.root.configure(bg="#1c1c1c")
+        # Light window background
+        self.root.configure(bg="#f0f0f0")
 
         # ── Load config ──
         self._config = self._load_config()
@@ -188,8 +188,8 @@ class CouponApp:
 
         # ── Style ──
         style = ttk.Style()
-        # Sun Valley dark theme — modern rounded UI
-        sv_ttk.set_theme("dark")
+        # Sun Valley light theme — modern rounded UI
+        sv_ttk.set_theme("light")
         # Custom accent color
         style.configure("Accent.TButton", font=("", 11, "bold"))
         style.configure("Title.TLabel", font=("", 14, "bold"))
@@ -234,7 +234,7 @@ class CouponApp:
 
         # Row 0: Monarch
         ttk.Label(frm, text="Monarch 主公名稱:").grid(row=0, column=0, sticky=tk.W, padx=(0, 6))
-        self.lbl_monarch = ttk.Label(frm, text="未載入", foreground="gray")
+        self.lbl_monarch = ttk.Label(frm, text="未載入", foreground="#555555")
         self.lbl_monarch.grid(row=0, column=1, sticky=tk.W, padx=6)
         ttk.Button(frm, text="📂 選擇", command=self._load_monarch).grid(row=0, column=2, padx=4)
         ttk.Button(frm, text="✏️ 編輯", command=self._edit_monarch).grid(row=0, column=3, padx=4)
@@ -243,7 +243,7 @@ class CouponApp:
 
         # Row 1: Serialcode
         ttk.Label(frm, text="Serialcode 序號:").grid(row=1, column=0, sticky=tk.W, padx=(0, 6), pady=(8, 0))
-        self.lbl_serial = ttk.Label(frm, text="未載入", foreground="gray")
+        self.lbl_serial = ttk.Label(frm, text="未載入", foreground="#555555")
         self.lbl_serial.grid(row=1, column=1, sticky=tk.W, padx=6, pady=(8, 0))
         ttk.Button(frm, text="📂 選擇", command=self._load_serial).grid(row=1, column=2, padx=4, pady=(8, 0))
         ttk.Button(frm, text="✏️ 編輯", command=self._edit_serial).grid(row=1, column=3, padx=4, pady=(8, 0))
@@ -257,12 +257,12 @@ class CouponApp:
         ttk.Radiobutton(frm, text="一對一模式 — 1個主公對應1個序號（依序配對）",
                         variable=self.mode, value="one2one",
                         command=self._on_mode_change).pack(anchor=tk.W)
-        ttk.Label(frm, text="   例: 主公A→序號1, 主公B→序號2, …", foreground="gray").pack(anchor=tk.W, padx=(24, 0))
+        ttk.Label(frm, text="   例: 主公A→序號1, 主公B→序號2, …", foreground="#555555").pack(anchor=tk.W, padx=(24, 0))
 
         ttk.Radiobutton(frm, text="共用模式 — 所有主公共用一個序號，用完再換下一個",
                         variable=self.mode, value="shared",
                         command=self._on_mode_change).pack(anchor=tk.W)
-        ttk.Label(frm, text="   例: 主公A→序號1, 主公B→序號1, …, 主公A→序號2, …", foreground="gray").pack(anchor=tk.W, padx=(24, 0))
+        ttk.Label(frm, text="   例: 主公A→序號1, 主公B→序號1, …, 主公A→序號2, …", foreground="#555555").pack(anchor=tk.W, padx=(24, 0))
 
     def _build_table(self):
         frm = ttk.LabelFrame(self.root, text="📋 任務列表", padding=8)
@@ -342,8 +342,8 @@ class CouponApp:
         log_frame.pack(fill=tk.BOTH, expand=True)
 
         self.log = scrolledtext.ScrolledText(log_frame, height=6, wrap=tk.WORD,
-                                             font=("Consolas", 10), bg="#2b2b2b",
-                                             fg="#e0e0e0", insertbackground="#e0e0e0",
+                                             font=("Consolas", 10), bg="#ffffff",
+                                             fg="#000000", insertbackground="#000000",
                                              relief="flat", borderwidth=0)
         self.log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -351,7 +351,7 @@ class CouponApp:
         btn_frame = ttk.Frame(frm)
         btn_frame.pack(fill=tk.X, pady=(4, 0))
         ttk.Button(btn_frame, text="🗑️ 清除日誌", command=self._clear_log).pack(side=tk.RIGHT)
-        self.lbl_log_count = ttk.Label(btn_frame, text="", foreground="gray")
+        self.lbl_log_count = ttk.Label(btn_frame, text="", foreground="#555555")
         self.lbl_log_count.pack(side=tk.LEFT)
 
     # ── File operations ──
@@ -374,7 +374,7 @@ class CouponApp:
                     deduped.append(ln)
             self.monarchs = deduped
             dedup_msg = f" (已去重 {len(raw) - len(deduped)} 筆)" if len(raw) != len(deduped) else ""
-            self.lbl_monarch.config(text=f"{path} ({len(self.monarchs)} 筆)", foreground="black")
+            self.lbl_monarch.config(text=f"{path} ({len(self.monarchs)} 筆)", foreground="#000000")
             self._log(f"📂 載入 monarch: {len(self.monarchs)} 筆{dedup_msg}")
 
     def _load_serial(self):
@@ -387,7 +387,7 @@ class CouponApp:
             self._last_dir = os.path.dirname(path)
             self._save_config()
             self.serialcodes = self._read_lines(path)
-            self.lbl_serial.config(text=f"{path} ({len(self.serialcodes)} 筆)", foreground="black")
+            self.lbl_serial.config(text=f"{path} ({len(self.serialcodes)} 筆)", foreground="#000000")
             self._log(f"📂 載入 serialcode: {len(self.serialcodes)} 筆")
 
     def _edit_monarch(self):
@@ -398,12 +398,12 @@ class CouponApp:
 
     def _on_monarch_edited(self, lines):
         self.monarchs = lines
-        self.lbl_monarch.config(text=f"手動編輯 ({len(self.monarchs)} 筆)", foreground="black")
+        self.lbl_monarch.config(text=f"手動編輯 ({len(self.monarchs)} 筆)", foreground="#000000")
         self._log(f"✏️ 編輯 monarch: {len(self.monarchs)} 筆")
 
     def _on_serial_edited(self, lines):
         self.serialcodes = lines
-        self.lbl_serial.config(text=f"手動編輯 ({len(self.serialcodes)} 筆)", foreground="black")
+        self.lbl_serial.config(text=f"手動編輯 ({len(self.serialcodes)} 筆)", foreground="#000000")
         self._log(f"✏️ 編輯 serialcode: {len(self.serialcodes)} 筆")
 
     @staticmethod
@@ -710,13 +710,13 @@ class CouponApp:
         win = tk.Toplevel(self.root)
         win.title(f"編輯 {title}")
         win.geometry("520x420")
-        win.configure(bg="#1c1c1c")
+        win.configure(bg="#f0f0f0")
         win.transient(self.root)
         win.grab_set()
 
         txt = scrolledtext.ScrolledText(win, font=("Consolas", 11), wrap=tk.WORD,
-                                        bg="#2b2b2b", fg="#e0e0e0",
-                                        insertbackground="#e0e0e0",
+                                        bg="#ffffff", fg="#000000",
+                                        insertbackground="#000000",
                                         relief="flat", borderwidth=0)
         txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
         txt.insert("1.0", "\n".join(current_lines))
