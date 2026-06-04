@@ -71,6 +71,24 @@ h2 {
   font-style: italic;
 }
 
+.file-name.loaded {
+  color: #1a7a1a;
+  font-style: normal;
+  font-weight: bold;
+  background: #e6f9e6;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.file-name.loaded::before {
+  content: '✅ 已持久化—';
+  font-size: 11px;
+}
+
 .mode-section {
   margin-bottom: 20px;
   padding: 15px;
@@ -150,7 +168,7 @@ h2 {
   margin-bottom: 0;
 }
 
-.start-btn, .stop-btn, .clear-btn, .export-btn {
+.start-btn, .stop-btn, .clear-btn, .web-btn {
   width: 100%;
   padding: 12px;
   font-size: 16px;
@@ -198,16 +216,16 @@ h2 {
   box-shadow: 0 4px 12px rgba(127, 140, 141, 0.4);
 }
 
-.export-btn {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  margin-top: 10px;
+.web-btn {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+  margin-bottom: 20px;
   font-size: 14px;
   padding: 10px;
 }
 
-.export-btn:hover {
+.web-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
 }
 
 .progress-section {

@@ -15,12 +15,14 @@ async function initializePopup() {
     if (result.monarchs && result.monarchs.length > 0) {
       monarchs = result.monarchs;
       monarchFileName.textContent = result.monarchFileName || `已載入 ${monarchs.length} 個主公`;
+      monarchFileName.classList.add('loaded');
       checkFilesReady();
     }
     
     if (result.serials && result.serials.length > 0) {
       serials = result.serials;
       serialFileName.textContent = result.serialFileName || `已載入 ${serials.length} 個序號`;
+      serialFileName.classList.add('loaded');
       checkFilesReady();
     }
     
@@ -66,7 +68,7 @@ const serialFileName = document.getElementById('serialFileName');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const clearBtn = document.getElementById('clearBtn');
-const exportBtn = document.getElementById('exportBtn');
+const openWebBtn = document.getElementById('openWebBtn');
 const progressSection = document.getElementById('progressSection');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
@@ -83,6 +85,7 @@ monarchFile.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (file) {
     monarchFileName.textContent = file.name;
+    monarchFileName.classList.add('loaded');
     readFile(file, (content) => {
       monarchs = content.split('\n').map(line => line.trim()).filter(line => line);
       checkFilesReady();
@@ -96,6 +99,7 @@ serialFile.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (file) {
     serialFileName.textContent = file.name;
+    serialFileName.classList.add('loaded');
     readFile(file, (content) => {
       serials = content.split('\n').map(line => line.trim()).filter(line => line);
       checkFilesReady();
@@ -222,7 +226,9 @@ clearBtn.addEventListener('click', async () => {
     // 重置 UI
     logContent.innerHTML = '';
     monarchFileName.textContent = '未選擇文件';
+    monarchFileName.classList.remove('loaded');
     serialFileName.textContent = '未選擇文件';
+    serialFileName.classList.remove('loaded');
     monarchFile.value = '';
     serialFile.value = '';
     
@@ -244,14 +250,15 @@ clearBtn.addEventListener('click', async () => {
   }
 });
 
-// 導出 debug.log
-exportBtn.addEventListener('click', () => {
-  if (debugLogs.length === 0) {
-    addLog('⚠ 沒有日誌可以導出', 'warning');
-    return;
-  }
+// 前往兌換頁面
+openWebBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://coupon.kingdom-story.com/lang/zh-TW' });
+});
+
+// 自動導出 debug.log
+function autoExportLog() {
+  if (debugLogs.length === 0) return;
   
-  // 生成文件內容
   const content = [
     '='.repeat(80),
     '三國萌萌打虛寶序號自動填寫工具 - Debug Log',
@@ -267,7 +274,6 @@ exportBtn.addEventListener('click', () => {
     '='.repeat(80)
   ].join('\n');
   
-  // 創建下載
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -278,8 +284,8 @@ exportBtn.addEventListener('click', () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   
-  addLog('✅ Debug log 已導出', 'success');
-});
+  addLog('📥 Debug log 已自動下載', 'info');
+}
 
 // 一對一模式
 async function executeOneToOne(tabId) {
@@ -327,6 +333,7 @@ async function executeOneToOne(tabId) {
   updateProgress(100, '執行完成');
   addLog('========================================', 'info');
   addLog(`執行完成！成功：${successCount}，失敗：${errorCount}`, successCount > 0 ? 'success' : 'warning');
+  autoExportLog();
   resetUI();
 }
 
@@ -384,6 +391,7 @@ async function executeShared(tabId) {
   updateProgress(100, '執行完成');
   addLog('========================================', 'info');
   addLog(`執行完成！成功：${successCount}，失敗：${errorCount}`, successCount > 0 ? 'success' : 'warning');
+  autoExportLog();
   resetUI();
 }
 
