@@ -1,3 +1,30 @@
+給我一個python檔案。
+
+可以讓我載入兩個txt，分別是monarch跟serialcode。
+
+並且讓我選擇執行模式。
+
+          <span>一對一模式</span>
+
+          <small>1個帳號對應1個序號</small>
+
+或是
+
+          <span>共用模式</span>
+
+          <small>所有帳號用完一個序號再換下一個</small>
+
+
+
+用tk進行製作。
+
+要有欄位顯示 monarch|serialcode|使用狀態
+
+旁邊還有重試的按鈕。
+
+
+
+---
 POST /register-coupon HTTP/1.1
 Host: coupon.kingdom-story.com
 Content-Length: 74
