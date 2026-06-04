@@ -171,6 +171,93 @@ def parse_response(result: dict) -> tuple[bool, str]:
 
 
 # ═══════════════════════════════════════════
+#  Sliding Toggle Switch
+# ═══════════════════════════════════════════
+
+class ToggleSwitch(tk.Canvas):
+    """Modern iOS-style sliding toggle switch."""
+
+    WIDTH = 52
+    HEIGHT = 28
+    PAD = 3
+    KNOB_R = 11
+    ANIM_STEPS = 8
+
+    def __init__(self, parent, variable, on_color="#34c759", off_color="#636366",
+                 track_on="#34c759", track_off="#48484a", **kw):
+        super().__init__(parent, width=self.WIDTH, height=self.HEIGHT,
+                         highlightthickness=0, bd=0, cursor="hand2", **kw)
+        self.var = variable
+        self.on_color = on_color
+        self.off_color = off_color
+        self.track_on = track_on
+        self.track_off = track_off
+        self._command = None
+
+        self.bind("<Button-1>", self._on_click)
+
+    def set_command(self, cmd):
+        self._command = cmd
+
+    def draw(self):
+        self.delete("all")
+        on = self.var.get() == "dark"
+        track_color = self.track_on if on else self.track_off
+        knob_color = self.on_color if on else self.off_color
+
+        # Rounded track
+        self._round_rect(2, 2, self.WIDTH - 2, self.HEIGHT - 2,
+                         radius=self.HEIGHT // 2 - 1,
+                         fill=track_color, outline="")
+
+        # Knob
+        cx = self.WIDTH - self.PAD - self.KNOB_R if on else self.PAD + self.KNOB_R
+        cy = self.HEIGHT // 2
+        self.create_oval(cx - self.KNOB_R, cy - self.KNOB_R,
+                         cx + self.KNOB_R, cy + self.KNOB_R,
+                         fill=knob_color, outline="")
+
+    def _round_rect(self, x1, y1, x2, y2, radius=10, **kwargs):
+        """Draw a rounded rectangle."""
+        points = [
+            x1 + radius, y1,
+            x2 - radius, y1,
+            x2, y1,
+            x2, y1 + radius,
+            x2, y2 - radius,
+            x2, y2,
+            x2 - radius, y2,
+            x1 + radius, y2,
+            x1, y2,
+            x1, y2 - radius,
+            x1, y1 + radius,
+            x1, y1,
+        ]
+        return self.create_polygon(points, smooth=True, **kwargs)
+
+    def _on_click(self, event):
+        on = self.var.get() == "dark"
+        # Animate
+        target_x = self.PAD + self.KNOB_R if on else self.WIDTH - self.PAD - self.KNOB_R
+        start_x = self.WIDTH - self.PAD - self.KNOB_R if on else self.PAD + self.KNOB_R
+        for i in range(1, self.ANIM_STEPS + 1):
+            t = i / self.ANIM_STEPS
+            t = t * t * (3 - 2 * t)  # ease in-out
+            cx = start_x + (target_x - start_x) * t
+            cy = self.HEIGHT // 2
+            self.delete("knob")
+            knob_color = self.off_color if on else self.on_color
+            self.create_oval(cx - self.KNOB_R, cy - self.KNOB_R,
+                             cx + self.KNOB_R, cy + self.KNOB_R,
+                             fill=knob_color, outline="", tags="knob")
+            self.update()
+        self.var.set("light" if on else "dark")
+        self.draw()
+        if self._command:
+            self._command()
+
+
+# ═══════════════════════════════════════════
 #  GUI Application
 # ═══════════════════════════════════════════
 
@@ -238,6 +325,20 @@ class CouponApp:
 
         # Apply theme colors to non-ttk widgets
         self._apply_theme_colors(theme_name)
+
+        # ── Theme toggle switch (top-right corner) ──
+        # Sun/moon labels
+        self.lbl_sun = tk.Label(self.root, text="☀️", font=("", 12), bg="#f0f0f0",
+                                fg="#000000")
+        self.lbl_sun.place(relx=1.0, x=-96, y=12, anchor="ne")
+        self.lbl_moon = tk.Label(self.root, text="🌙", font=("", 12), bg="#f0f0f0",
+                                 fg="#000000")
+        self.lbl_moon.place(relx=1.0, x=-20, y=12, anchor="ne")
+
+        self.toggle = ToggleSwitch(self.root, self.theme, bg="#f0f0f0")
+        self.toggle.set_command(self._toggle_theme)
+        self.toggle.place(relx=1.0, x=-58, y=10, anchor="ne")
+        self.toggle.draw()
 
         # Poll queue for UI updates
         self._poll_queue()
@@ -341,13 +442,6 @@ class CouponApp:
         self.btn_stop.pack(side=tk.RIGHT, padx=4)
         self.btn_export = ttk.Button(frm, text="📤 匯出結果", command=self._export)
         self.btn_export.pack(side=tk.RIGHT, padx=4)
-
-        # Theme toggle
-        self.btn_theme = ttk.Checkbutton(frm, text="🌙 深色模式",
-                                         variable=self.theme,
-                                         onvalue="dark", offvalue="light",
-                                         command=self._toggle_theme)
-        self.btn_theme.pack(side=tk.RIGHT, padx=(12, 2))
 
         # Worker count
         ttk.Label(frm, text="併發:").pack(side=tk.RIGHT, padx=(12, 2))
@@ -743,6 +837,14 @@ class CouponApp:
             gray_fg = "#555555"
 
         self.root.configure(bg=root_bg)
+
+        # Update toggle switch background
+        if hasattr(self, 'toggle'):
+            self.toggle.configure(bg=root_bg)
+            self.toggle.draw()
+        for lbl_name in ('lbl_sun', 'lbl_moon'):
+            if hasattr(self, lbl_name):
+                getattr(self, lbl_name).configure(bg=root_bg, fg=lbl_fg)
 
         # Update log widget if built
         if self._log_widget:
