@@ -166,6 +166,8 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
         }
       }
     }
+    serverInput.dispatchEvent(new Event('input', { bubbles: true }));
+    serverInput.dispatchEvent(new Event('change', { bubbles: true }));
 
     // 2. 填入主公名稱
     logs.push('步驟 4: 填入主公名稱');
@@ -177,6 +179,7 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
     }
     logs.push(`✓ 找到主公名稱輸入框: ${monarchInput.className}`);
     
+    monarchInput.classList.remove('error');
     monarchInput.value = monarch;
     monarchInput.dispatchEvent(new Event('input', { bubbles: true }));
     monarchInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -192,6 +195,7 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
     }
     logs.push(`✓ 找到虛寶序號輸入框: ${serialInput.className}`);
     
+    serialInput.classList.remove('error');
     serialInput.value = serial;
     serialInput.dispatchEvent(new Event('input', { bubbles: true }));
     serialInput.dispatchEvent(new Event('change', { bubbles: true }));
