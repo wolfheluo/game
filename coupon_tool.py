@@ -265,7 +265,7 @@ class ToggleSwitch(tk.Canvas):
 class CouponApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("三國萌萌打 兌換碼工具 v2.2")
+        self.root.title("三國萌萌打 兌換碼工具")
         self.root.geometry("980x720")
         self.root.minsize(860, 560)
         # Light window background
@@ -282,25 +282,12 @@ class CouponApp:
         self._editor_txt = None  # set by _open_editor
 
         # ── Style ──
-        style = ttk.Style()
+        self.style = ttk.Style()
+        self._setup_styles()
         sv_ttk.set_theme(theme_name)
 
         # ── Font setup ──
-        style.configure(".", font=(FONT_FAMILY, 10))
-        style.configure("TLabel", font=(FONT_FAMILY, 10))
-        style.configure("TButton", font=(FONT_FAMILY, 10))
-        style.configure("TRadiobutton", font=(FONT_FAMILY, 10))
-
-        # Custom accent color
-        style.configure("Accent.TButton", font=(FONT_FAMILY, 11, "bold"))
-        style.configure("Title.TLabel", font=(FONT_FAMILY, 14, "bold"))
-        style.configure("Heading.TLabel", font=(FONT_FAMILY, 10, "bold"))
-        style.configure("Success.TLabel", foreground="#4caf50")
-        style.configure("Failed.TLabel", foreground="#f44336")
-        style.configure("Big.TButton", font=(FONT_FAMILY, 12, "bold"))
-        # Card-like frames
-        style.configure("Card.TLabelframe", relief="solid", borderwidth=0)
-        style.configure("Card.TLabelframe.Label", font=(FONT_FAMILY, 10, "bold"))
+        # This is now handled in _setup_styles
 
         # ── Data ──
         self.monarchs: list[str] = []
@@ -343,6 +330,28 @@ class CouponApp:
 
         # Poll queue for UI updates
         self._poll_queue()
+
+    def _setup_styles(self):
+        """Set up all custom ttk styles."""
+        # ── Font setup ──
+        self.style.configure(".", font=(FONT_FAMILY, 10))
+        self.style.configure("TLabel", font=(FONT_FAMILY, 10))
+        self.style.configure("TButton", font=(FONT_FAMILY, 10))
+        self.style.configure("TRadiobutton", font=(FONT_FAMILY, 10))
+
+        # Custom accent color
+        self.style.configure("Accent.TButton", font=(FONT_FAMILY, 11, "bold"))
+        self.style.configure("Title.TLabel", font=(FONT_FAMILY, 14, "bold"))
+        self.style.configure("Heading.TLabel", font=(FONT_FAMILY, 10, "bold"))
+        self.style.configure("Success.TLabel", foreground="#4caf50")
+        self.style.configure("Failed.TLabel", foreground="#f44336")
+        self.style.configure("Big.TButton", font=(FONT_FAMILY, 12, "bold"))
+        # Card-like frames
+        self.style.configure("Card.TLabelframe", relief="solid", borderwidth=0)
+        self.style.configure("Card.TLabelframe.Label", font=(FONT_FAMILY, 10, "bold"))
+        # Treeview
+        self.style.configure("Tasks.Treeview", rowheight=28, font=(FONT_FAMILY, 10))
+        self.style.configure("Tasks.Treeview.Heading", font=(FONT_FAMILY, 10, "bold"))
 
     # ── UI Sections ──
 
@@ -388,9 +397,6 @@ class CouponApp:
 
         # Treeview
         cols = ("#", "monarch", "serialcode", "status", "message")
-        style = ttk.Style()
-        style.configure("Tasks.Treeview", rowheight=28, font=(FONT_FAMILY, 10))
-        style.configure("Tasks.Treeview.Heading", font=(FONT_FAMILY, 10, "bold"))
         self.tree = ttk.Treeview(frm, columns=cols, show="headings", height=8,
                                  style="Tasks.Treeview")
         self.tree.heading("#", text="#")
@@ -872,6 +878,7 @@ class CouponApp:
         new_theme = "dark" if self.theme.get() == "light" else "light"
         self.theme.set(new_theme)
         sv_ttk.set_theme(new_theme)
+        self._setup_styles()  # Re-apply custom styles
         self._apply_theme_colors(new_theme)
         self._save_config()
 
