@@ -283,8 +283,8 @@ class CouponApp:
 
         # ── Style ──
         self.style = ttk.Style()
-        self._setup_styles()
         sv_ttk.set_theme(theme_name)
+        self._setup_styles()
 
         # ── Font setup ──
         # This is now handled in _setup_styles
