@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-王國紀元兌換碼工具 — Coupon Redemption Tool
+三國萌萌打兌換碼工具 — Coupon Redemption Tool
 支援載入 monarch（主公名稱）與 serialcode（虛寶序號）兩個 txt 檔案，
 提供「一對一模式」與「共用模式」兩種執行方式。
 """
@@ -175,7 +175,7 @@ def parse_response(result: dict) -> tuple[bool, str]:
 class CouponApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("王國紀元 兌換碼工具 v2.1")
+        self.root.title("三國萌萌打 兌換碼工具 v2.1")
         self.root.geometry("960x680")
         self.root.minsize(820, 520)
 
