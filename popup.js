@@ -3,6 +3,60 @@ let monarchs = [];
 let serials = [];
 let isRunning = false;
 let shouldStop = false;
+let debugLogs = []; // 詳細的 debug 日誌
+
+// 初始化：從 storage 恢復狀態
+async function initializePopup() {
+  try {
+    // 從 storage 讀取保存的狀態
+    const result = await chrome.storage.local.get(['monarchs', 'serials', 'logs', 'monarchFileName', 'serialFileName']);
+    
+    // 恢復數據
+    if (result.monarchs && result.monarchs.length > 0) {
+      monarchs = result.monarchs;
+      monarchFileName.textContent = result.monarchFileName || `已載入 ${monarchs.length} 個主公`;
+      checkFilesReady();
+    }
+    
+    if (result.serials && result.serials.length > 0) {
+      serials = result.serials;
+      serialFileName.textContent = result.serialFileName || `已載入 ${serials.length} 個序號`;
+      checkFilesReady();
+    }
+    
+    // 恢復 log
+    if (result.logs && result.logs.length > 0) {
+      logContent.innerHTML = result.logs;
+      logContent.scrollTop = logContent.scrollHeight;
+    } else {
+      addLog('👋 準備就緒，請上傳文件', 'info');
+    }
+    
+    // 恢復 debug logs
+    if (result.debugLogs && result.debugLogs.length > 0) {
+      debugLogs = result.debugLogs;
+    }
+  } catch (error) {
+    console.error('載入狀態失敗', error);
+    addLog('👋 準備就緒，請上傳文件', 'info');
+  }
+}
+
+// 保存當前狀態到 storage
+async function saveState() {
+  try {
+    await chrome.storage.local.set({
+      monarchs: monarchs,
+      serials: serials,
+      logs: logContent.innerHTML,
+      monarchFileName: monarchFileName.textContent,
+      serialFileName: serialFileName.textContent,
+      debugLogs: debugLogs
+    });
+  } catch (error) {
+    console.error('保存狀態失敗', error);
+  }
+}
 
 // DOM 元素
 const monarchFile = document.getElementById('monarchFile');
@@ -11,11 +65,18 @@ const monarchFileName = document.getElementById('monarchFileName');
 const serialFileName = document.getElementById('serialFileName');
 const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
+const clearBtn = document.getElementById('clearBtn');
+const exportBtn = document.getElementById('exportBtn');
 const progressSection = document.getElementById('progressSection');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const logSection = document.getElementById('logSection');
 const logContent = document.getElementById('logContent');
+
+// Popup 開啟時初始化
+document.addEventListener('DOMContentLoaded', () => {
+  initializePopup();
+});
 
 // 文件上傳處理
 monarchFile.addEventListener('change', (e) => {
@@ -26,6 +87,7 @@ monarchFile.addEventListener('change', (e) => {
       monarchs = content.split('\n').map(line => line.trim()).filter(line => line);
       checkFilesReady();
       addLog(`已載入 ${monarchs.length} 個主公名稱`, 'info');
+      saveState(); // 保存狀態
     });
   }
 });
@@ -38,6 +100,7 @@ serialFile.addEventListener('change', (e) => {
       serials = content.split('\n').map(line => line.trim()).filter(line => line);
       checkFilesReady();
       addLog(`已載入 ${serials.length} 個虛寶序號`, 'info');
+      saveState(); // 保存狀態
     });
   }
 });
@@ -92,38 +155,43 @@ startBtn.addEventListener('click', async () => {
   progressSection.style.display = 'block';
   logSection.style.display = 'block';
   logContent.innerHTML = '';
+  
+  // 清空之前的 debug logs
+  debugLogs = [];
 
-  addLog('🚀 開始執行自動填寫...', 'info');
-  addLog(`模式：${mode === 'oneToOne' ? '一對一' : '共用'}`, 'info');
-  addLog(`伺服器：天下爭霸`, 'info');
+  addLog('🚀 開始執行', 'info');
+  addLog(`模式：${mode === 'oneToOne' ? '一對一' : '共用'} | 伺服器：天下爭霸`, 'info');
+  
+  addDebugLog('========== 開始新的執行 ==========');
+  addDebugLog(`模式：${mode === 'oneToOne' ? '一對一' : '共用'}`);
+  addDebugLog(`主公數量：${monarchs.length}`);
+  addDebugLog(`序號數量：${serials.length}`);
 
   // 獲取當前活動標籤頁
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
   if (!tab) {
-    addLog('錯誤：無法獲取當前標籤頁', 'error');
+    addLog('❌ 錯誤：無法獲取當前標籤頁', 'error');
+    addDebugLog('錯誤：無法獲取當前標籤頁');
     resetUI();
     return;
   }
   
-  addLog(`當前頁面：${tab.url}`, 'info');
+  addDebugLog(`當前頁面：${tab.url}`);
   
   // 先檢查頁面結構
-  addLog('🔍 正在檢查頁面結構...', 'info');
+  addDebugLog('正在檢查頁面結構...');
   try {
     const pageCheckResult = await checkPageStructure(tab.id);
     if (pageCheckResult.success) {
-      addLog('✓ 頁面結構檢查完成', 'success');
-      addLog(`詳細資訊：`, 'info');
-      const pageInfo = pageCheckResult.pageInfo;
-      addLog(`  - 伺服器輸入框: ${pageInfo.elements.serverInput.found ? '✓' : '✗'}`, pageInfo.elements.serverInput.found ? 'success' : 'error');
-      addLog(`  - 主公名稱輸入框: ${pageInfo.elements.monarchInput.found ? '✓' : '✗'}`, pageInfo.elements.monarchInput.found ? 'success' : 'error');
-      addLog(`  - 虛寶序號輸入框: ${pageInfo.elements.serialInput.found ? '✓' : '✗'}`, pageInfo.elements.serialInput.found ? 'success' : 'error');
-      addLog(`  - 提交按鈕: ${pageInfo.elements.submitButton.jsSubmitBtn || pageInfo.elements.submitButton.serialFormSubmit ? '✓' : '✗'}`, 
-             pageInfo.elements.submitButton.jsSubmitBtn || pageInfo.elements.submitButton.serialFormSubmit ? 'success' : 'error');
+      addDebugLog('頁面結構檢查完成', pageCheckResult.pageInfo);
+      // 不在 UI 顯示詳細頁面檢查結果
     }
   } catch (error) {
-    addLog(`⚠ 頁面檢查失敗: ${error.message}`, 'warning');
+    addLog(`❌ 頁面檢查失敗: ${error.message}`, 'error');
+    addDebugLog(`頁面檢查失敗: ${error.message}`, error);
+    resetUI();
+    return;
   }
 
   // 執行任務
@@ -138,6 +206,79 @@ startBtn.addEventListener('click', async () => {
 stopBtn.addEventListener('click', () => {
   shouldStop = true;
   addLog('正在停止執行...', 'warning');
+});
+
+// 清空資料
+clearBtn.addEventListener('click', async () => {
+  if (isRunning) {
+    addLog('執行中無法清空，請先停止執行', 'warning');
+    return;
+  }
+  
+  if (confirm('確定要清空所有資料（包括上傳的文件和日誌）嗎？')) {
+    // 清空 storage
+    await chrome.storage.local.clear();
+    
+    // 重置 UI
+    logContent.innerHTML = '';
+    monarchFileName.textContent = '未選擇文件';
+    serialFileName.textContent = '未選擇文件';
+    monarchFile.value = '';
+    serialFile.value = '';
+    
+    // 清空數據
+    monarchs = [];
+    serials = [];
+    debugLogs = []; // 清空 debug logs
+    
+    // 重置進度
+    progressSection.style.display = 'none';
+    progressFill.style.width = '0%';
+    progressText.textContent = '';
+    logSection.style.display = 'none';
+    
+    // 重置按鈕
+    startBtn.disabled = true;
+    
+    addLog('✅ 已清空所有資料', 'success');
+  }
+});
+
+// 導出 debug.log
+exportBtn.addEventListener('click', () => {
+  if (debugLogs.length === 0) {
+    addLog('⚠ 沒有日誌可以導出', 'warning');
+    return;
+  }
+  
+  // 生成文件內容
+  const content = [
+    '='.repeat(80),
+    '三國萌萌打虛寶序號自動填寫工具 - Debug Log',
+    '='.repeat(80),
+    `生成時間: ${new Date().toISOString()}`,
+    `總日誌數: ${debugLogs.length}`,
+    '='.repeat(80),
+    '',
+    ...debugLogs,
+    '',
+    '='.repeat(80),
+    'End of Log',
+    '='.repeat(80)
+  ].join('\n');
+  
+  // 創建下載
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `debug_${new Date().toISOString().replace(/:/g, '-')}.log`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  addLog('✅ Debug log 已導出', 'success');
 });
 
 // 一對一模式
@@ -157,15 +298,23 @@ async function executeOneToOne(tabId) {
     const progress = ((i + 1) / total * 100).toFixed(1);
 
     updateProgress(progress, `處理中 ${i + 1}/${total}`);
-    addLog(`[${i + 1}/${total}] 主公：${monarch} | 序號：${serial}`, 'info');
+    
+    addDebugLog(`[${i + 1}/${total}] 開始處理 - 主公：${monarch} | 序號：${serial}`);
 
     try {
-      await fillAndSubmit(tabId, monarch, serial);
+      const response = await fillAndSubmit(tabId, monarch, serial);
       successCount++;
-      addLog(`✓ 成功提交`, 'success');
+      
+      // UI 只顯示簡潔的成功信息
+      addLog(`✅ ${monarch} 成功使用 ${serial}`, 'success');
+      addDebugLog(`[${i + 1}/${total}] 成功 - 網站回應: ${JSON.stringify(response.response)}`);
     } catch (error) {
       errorCount++;
-      addLog(`✗ 錯誤：${error.message}`, 'error');
+      
+      // UI 只顯示簡潔的失敗信息和原因
+      const errorReason = error.message || '未知錯誤';
+      addLog(`❌ ${monarch} 使用 ${serial} 失敗: ${errorReason}`, 'error');
+      addDebugLog(`[${i + 1}/${total}] 失敗 - ${error.message}`, error);
     }
 
     // 延遲 2 秒
@@ -195,7 +344,8 @@ async function executeShared(tabId) {
     }
 
     const serial = serials[s];
-    addLog(`======== 使用序號：${serial} ========`, 'info');
+    addLog(`======== 序號：${serial} ========`, 'info');
+    addDebugLog(`======== 開始使用序號：${serial} ========`);
 
     for (let m = 0; m < monarchs.length; m++) {
       if (shouldStop) break;
@@ -205,15 +355,22 @@ async function executeShared(tabId) {
       const progress = (taskIndex / totalTasks * 100).toFixed(1);
 
       updateProgress(progress, `處理中 ${taskIndex}/${totalTasks}`);
-      addLog(`[${taskIndex}/${totalTasks}] 主公：${monarch}`, 'info');
+      addDebugLog(`[${taskIndex}/${totalTasks}] 開始處理 - 主公：${monarch} | 序號：${serial}`);
 
       try {
-        await fillAndSubmit(tabId, monarch, serial);
+        const response = await fillAndSubmit(tabId, monarch, serial);
         successCount++;
-        addLog(`✓ 成功提交`, 'success');
+        
+        // UI 只顯示簡潔的成功信息
+        addLog(`✅ ${monarch} 成功使用 ${serial}`, 'success');
+        addDebugLog(`[${taskIndex}/${totalTasks}] 成功 - 網站回應: ${JSON.stringify(response.response)}`);
       } catch (error) {
         errorCount++;
-        addLog(`✗ 錯誤：${error.message}`, 'error');
+        
+        // UI 只顯示簡潔的失敗信息和原因
+        const errorReason = error.message || '未知錯誤';
+        addLog(`❌ ${monarch} 使用 ${serial} 失敗: ${errorReason}`, 'error');
+        addDebugLog(`[${taskIndex}/${totalTasks}] 失敗 - ${error.message}`, error);
       }
 
       // 延遲 2 秒
@@ -264,35 +421,44 @@ async function fillAndSubmit(tabId, monarch, serial) {
         if (chrome.runtime.lastError) {
           // 檢查是否是本地文件權限問題
           const errorMsg = chrome.runtime.lastError.message || '';
-          addLog(`Chrome 錯誤: ${errorMsg}`, 'error');
+          addDebugLog(`Chrome 錯誤: ${errorMsg}`);
           if (errorMsg.includes('Cannot access') || errorMsg.includes('Receiving end does not exist')) {
-            reject(new Error('無法與頁面通訊。如果您在測試本地文件，請到 chrome://extensions/ 啟用「允許存取檔案網址」'));
+            reject(new Error('無法與頁面通訊'));
           } else {
-            reject(new Error('無法與頁面通訊，請確保在正確的網頁上'));
+            reject(new Error('無法與頁面通訊'));
           }
         } else if (response && response.success) {
-          // 顯示執行日誌
+          // 記錄詳細日誌到 debug
           if (response.log && response.log.length > 0) {
-            response.log.forEach(log => addLog(`  ${log}`, 'info'));
+            response.log.forEach(log => addDebugLog(`  ${log}`));
           }
-          // 顯示網站回應
+          
+          // UI 只顯示簡潔結果
           if (response.response) {
             if (response.response.code === 0) {
-              addLog(`  ✅ 網站確認成功`, 'success');
+              // 成功 - 不顯示，由調用方顯示
+            } else if (response.response.code === -1 && response.response.source === 'modal') {
+              // 來自錯誤彈窗的訊息 - 不顯示，由調用方顯示
             } else if (response.response.code) {
-              addLog(`  ⚠️ 網站回應: code ${response.response.code}`, 'warning');
+              // 其他錯誤代碼 - 不顯示，由調用方顯示
             }
           }
-          resolve();
+          resolve(response);
         } else {
-          // 顯示錯誤日誌
+          // 記錄詳細日誌到 debug（即使失敗，執行步驟也是正常的）
           if (response && response.log && response.log.length > 0) {
-            response.log.forEach(log => addLog(`  ${log}`, 'error'));
+            response.log.forEach(log => addDebugLog(`  ${log}`));
           }
-          // 檢查是否有錯誤代碼
+          // 檢查是否有錯誤代碼或錯誤彈窗
           const errorMsg = response?.error || '未知錯誤';
-          if (response && response.response && response.response.code) {
-            addLog(`  ❌ 網站錯誤代碼: ${response.response.code}`, 'error');
+          if (response && response.response) {
+            if (response.response.source === 'modal') {
+              addDebugLog(`  ❌ 最終結果: 錯誤彈窗 - ${response.response.message}`);
+            } else if (response.response.code) {
+              addDebugLog(`  ❌ 最終結果: 錯誤代碼 ${response.response.code}`);
+            }
+          } else {
+            addDebugLog(`  ❌ 最終結果: ${errorMsg}`);
           }
           reject(new Error(errorMsg));
         }
@@ -307,7 +473,16 @@ function updateProgress(percent, text) {
   progressText.textContent = text;
 }
 
-// 添加日誌
+// 添加詳細的 debug 日誌（不顯示在 UI）
+function addDebugLog(message, data = null) {
+  const timestamp = new Date().toISOString();
+  const logEntry = `[${timestamp}] ${message}${data ? ' ' + JSON.stringify(data) : ''}`;
+  debugLogs.push(logEntry);
+  console.log('[DEBUG]', message, data || '');
+}
+
+// 添加日誌（顯示在 UI）
+let saveTimeout = null;
 function addLog(message, type = 'info') {
   const entry = document.createElement('div');
   entry.className = `log-entry ${type}`;
@@ -315,6 +490,15 @@ function addLog(message, type = 'info') {
   entry.textContent = `[${timestamp}] ${message}`;
   logContent.appendChild(entry);
   logContent.scrollTop = logContent.scrollHeight;
+  
+  // 同時記錄到 debug log
+  addDebugLog(`[UI-${type.toUpperCase()}] ${message}`);
+  
+  // 防抖保存（500ms 內只保存一次）
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    saveState();
+  }, 500);
 }
 
 // 重置 UI

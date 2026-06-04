@@ -150,7 +150,7 @@ h2 {
   margin-bottom: 0;
 }
 
-.start-btn, .stop-btn {
+.start-btn, .stop-btn, .clear-btn, .export-btn {
   width: 100%;
   padding: 12px;
   font-size: 16px;
@@ -184,6 +184,30 @@ h2 {
 .stop-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+}
+
+.clear-btn {
+  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+  margin-top: 10px;
+  font-size: 14px;
+  padding: 10px;
+}
+
+.clear-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(127, 140, 141, 0.4);
+}
+
+.export-btn {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  margin-top: 10px;
+  font-size: 14px;
+  padding: 10px;
+}
+
+.export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
 }
 
 .progress-section {

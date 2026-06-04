@@ -239,11 +239,19 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
       logs.push(`✓ 收到網站回應: ${JSON.stringify(response)}`);
       
       if (response.code && response.code !== 0) {
-        const errorMsg = getErrorMessage(response.code);
-        logs.push(`❌ 網站返回錯誤代碼 ${response.code}: ${errorMsg}`);
-        const error = new Error(`網站錯誤 (code: ${response.code}): ${errorMsg}`);
+        // 如果是來自錯誤彈窗，直接使用 message
+        let errorMsg;
+        if (response.source === 'modal' && response.message) {
+          errorMsg = response.message;
+          logs.push(`❌ 網站錯誤彈窗: ${errorMsg}`);
+        } else {
+          errorMsg = getErrorMessage(response.code);
+          logs.push(`❌ 網站返回錯誤代碼 ${response.code}: ${errorMsg}`);
+        }
+        const error = new Error(`網站錯誤: ${errorMsg}`);
         error.log = logs;
         error.code = response.code;
+        error.source = response.source;
         throw error;
       } else {
         logs.push('✅ 提交成功！');
@@ -261,28 +269,103 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
   }
 }
 
-// 等待網站回應
+// 檢查網站的錯誤彈窗並立即關閉
+function checkAndCloseErrorModal() {
+  const modal = document.querySelector('.serialModalArea.js-serial-modal.error');
+  if (modal && modal.style.display !== 'none') {
+    const messageEl = modal.querySelector('.js-modal-message');
+    const message = messageEl ? messageEl.textContent.trim() : '未知錯誤';
+    
+    // 立即點擊關閉按鈕
+    const closeBtn = modal.querySelector('.serialModal__btn.js-modal-btn');
+    if (closeBtn) {
+      log('🔘 檢測到錯誤彈窗，立即關閉');
+      closeBtn.click(); // 立即點擊，不延遲
+    }
+    
+    return { hasError: true, message };
+  }
+  return { hasError: false, message: null };
+}
+
+// 等待網站回應（透過攔截 console.log 或檢查錯誤彈窗）
 function waitForResponse() {
   return new Promise((resolve) => {
     // 監聽 console.log 來捕捉 serialcode.js 的輸出
     const originalLog = console.log;
+    let resolved = false;
+    
+    // 設置 DOM 監聽器，一旦錯誤彈窗出現就立即關閉
+    const observer = new MutationObserver((mutations) => {
+      const errorCheck = checkAndCloseErrorModal();
+      if (errorCheck.hasError && !resolved) {
+        log('⚠ 檢測到錯誤彈窗（DOM 監聽）');
+        logError(`網站錯誤彈窗: ${errorCheck.message}`);
+        lastResponse = { code: -1, message: errorCheck.message, source: 'modal' };
+        resolved = true;
+        observer.disconnect();
+        console.log = originalLog;
+        
+        // 稍微延遲 resolve，確保關閉按鈕已被點擊
+        setTimeout(() => resolve(lastResponse), 200);
+      }
+    });
+    
+    // 開始監聽整個 document 的變化
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+    
     const checkResponse = (...args) => {
       originalLog.apply(console, args);
       
       // 檢查是否是 result 對象
-      if (args[0] === 'result' && args[1] && typeof args[1] === 'object' && 'code' in args[1]) {
+      if (!resolved && args[0] === 'result' && args[1] && typeof args[1] === 'object' && 'code' in args[1]) {
         lastResponse = args[1];
-        log('📡 捕捉到網站回應', args[1]);
+        log('📡 捕獲到網站回應', args[1]);
+        
+        // 如果有錯誤代碼，立即檢查並關閉錯誤彈窗
+        if (args[1].code !== 0) {
+          setTimeout(() => {
+            const errorCheck = checkAndCloseErrorModal();
+            if (errorCheck.hasError) {
+              log('⚠ 根據回應代碼檢測到錯誤彈窗');
+              logError(`網站錯誤彈窗: ${errorCheck.message}`);
+              lastResponse = { code: -1, message: errorCheck.message, source: 'modal' };
+            }
+          }, 100);
+        }
+        
         console.log = originalLog; // 恢復
+        observer.disconnect();
+        resolved = true;
         resolve(args[1]);
       }
     };
     
     console.log = checkResponse;
     
-    // 3 秒後自動恢復
+    // 3 秒後清理
     setTimeout(() => {
-      console.log = originalLog;
+      if (!resolved) {
+        console.log = originalLog;
+        observer.disconnect();
+        
+        // 最後檢查一次錯誤彈窗
+        const errorCheck = checkAndCloseErrorModal();
+        if (errorCheck.hasError) {
+          log('⚠ 檢測到錯誤彈窗（超時檢查）');
+          logError(`網站錯誤彈窗: ${errorCheck.message}`);
+          lastResponse = { code: -1, message: errorCheck.message, source: 'modal' };
+          resolve(lastResponse);
+        } else {
+          log('⚠ 等待回應超時（3秒），未檢測到錯誤');
+          resolve(null);
+        }
+      }
     }, 3000);
   });
 }

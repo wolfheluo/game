@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "三國萌萌打虛寶序號自動填寫工具",
-  "version": "1.1.0",
-  "description": "自動批量填寫三國萌萌打虛寶序號表單，含詳細 LOG 與錯誤代碼處理",
+  "version": "1.3.1",
+  "description": "自動批量填寫三國萌萌打虛寶序號表單，簡潔UI與詳細debug日誌",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "host_permissions": [
     "*://*/*"
