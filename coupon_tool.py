@@ -236,8 +236,9 @@ class ToggleSwitch(tk.Canvas):
         return self.create_polygon(points, smooth=True, **kwargs)
 
     def _on_click(self, event):
+        # Animate and call command, but don't change the variable here.
+        # The command is now responsible for that.
         on = self.var.get() == "dark"
-        # Animate
         target_x = self.PAD + self.KNOB_R if on else self.WIDTH - self.PAD - self.KNOB_R
         start_x = self.WIDTH - self.PAD - self.KNOB_R if on else self.PAD + self.KNOB_R
         for i in range(1, self.ANIM_STEPS + 1):
@@ -251,8 +252,8 @@ class ToggleSwitch(tk.Canvas):
                              cx + self.KNOB_R, cy + self.KNOB_R,
                              fill=knob_color, outline="", tags="knob")
             self.update()
-        self.var.set("light" if on else "dark")
-        self.draw()
+        # self.var.set("light" if on else "dark") # Let the command handle it
+        # self.draw() # Let the command handle it
         if self._command:
             self._command()
 
