@@ -4,12 +4,13 @@ let serials = [];
 let isRunning = false;
 let shouldStop = false;
 let debugLogs = []; // 詳細的 debug 日誌
+let debugLogEnabled = true; // 是否輸出 debug log
 
 // 初始化：從 storage 恢復狀態
 async function initializePopup() {
   try {
     // 從 storage 讀取保存的狀態
-    const result = await chrome.storage.local.get(['monarchs', 'serials', 'logs', 'monarchFileName', 'serialFileName']);
+    const result = await chrome.storage.local.get(['monarchs', 'serials', 'logs', 'monarchFileName', 'serialFileName', 'debugLogEnabled']);
     
     // 恢復數據
     if (result.monarchs && result.monarchs.length > 0) {
@@ -37,8 +38,14 @@ async function initializePopup() {
     // 恢復 debug logs
     if (result.debugLogs && result.debugLogs.length > 0) {
       debugLogs = result.debugLogs;
-    }
-  } catch (error) {
+    }    
+    // 恢覆 debug log 開關
+    if (result.debugLogEnabled === false) {
+      debugLogEnabled = false;
+      debugLogToggle.checked = false;
+      debugLogStatus.textContent = '關閉';
+      debugLogStatus.className = 'toggle-status off';
+    }  } catch (error) {
     console.error('載入狀態失敗', error);
     addLog('👋 準備就緒，請上傳文件', 'info');
   }
@@ -53,7 +60,8 @@ async function saveState() {
       logs: logContent.innerHTML,
       monarchFileName: monarchFileName.textContent,
       serialFileName: serialFileName.textContent,
-      debugLogs: debugLogs
+      debugLogs: debugLogs,
+      debugLogEnabled: debugLogEnabled
     });
   } catch (error) {
     console.error('保存狀態失敗', error);
@@ -69,6 +77,8 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const clearBtn = document.getElementById('clearBtn');
 const openWebBtn = document.getElementById('openWebBtn');
+const debugLogToggle = document.getElementById('debugLogToggle');
+const debugLogStatus = document.getElementById('debugLogStatus');
 const progressSection = document.getElementById('progressSection');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
@@ -255,9 +265,17 @@ openWebBtn.addEventListener('click', () => {
   chrome.tabs.create({ url: 'https://coupon.kingdom-story.com/lang/zh-TW' });
 });
 
+// Debug Log 開關
+debugLogToggle.addEventListener('change', () => {
+  debugLogEnabled = debugLogToggle.checked;
+  debugLogStatus.textContent = debugLogEnabled ? '開啟' : '關閉';
+  debugLogStatus.className = `toggle-status ${debugLogEnabled ? 'on' : 'off'}`;
+  chrome.storage.local.set({ debugLogEnabled: debugLogEnabled });
+});
+
 // 自動導出 debug.log
 function autoExportLog() {
-  if (debugLogs.length === 0) return;
+  if (!debugLogEnabled || debugLogs.length === 0) return;
   
   const content = [
     '='.repeat(80),

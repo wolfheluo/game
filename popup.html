@@ -46,6 +46,14 @@
     <div class="info-section">
       <p><strong>伺服器：</strong>天下爭霸</p>
       <p><strong>延遲時間：</strong>2 秒/次</p>
+      <div class="toggle-row">
+        <span><strong>Debug Log 輸出：</strong></span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="debugLogToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+        <span id="debugLogStatus" class="toggle-status on">開啟</span>
+      </div>
     </div>
 
     <button id="startBtn" class="start-btn" disabled>開始執行</button>
