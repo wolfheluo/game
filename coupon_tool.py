@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-三國萌萌打兌換碼工具 — Coupon Redemption Tool
+三國萌萌打兌換碼工具 v2.2
 支援載入 monarch（主公名稱）與 serialcode（虛寶序號）兩個 txt 檔案，
 提供「一對一模式」與「共用模式」兩種執行方式。
 """
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
+import sv_ttk
 import threading
 import queue
 import time
@@ -175,9 +176,11 @@ def parse_response(result: dict) -> tuple[bool, str]:
 class CouponApp:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("三國萌萌打 兌換碼工具 v2.1")
-        self.root.geometry("960x680")
-        self.root.minsize(820, 520)
+        self.root.title("三國萌萌打 兌換碼工具 v2.2")
+        self.root.geometry("980x720")
+        self.root.minsize(860, 560)
+        # Dark window background
+        self.root.configure(bg="#1c1c1c")
 
         # ── Load config ──
         self._config = self._load_config()
@@ -185,12 +188,18 @@ class CouponApp:
 
         # ── Style ──
         style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Title.TLabel", font=("Microsoft JhengHei", 14, "bold"))
-        style.configure("Heading.TLabel", font=("Microsoft JhengHei", 9, "bold"))
-        style.configure("Success.TLabel", foreground="#0a0")
-        style.configure("Failed.TLabel", foreground="#c00")
-        style.configure("Big.TButton", font=("Microsoft JhengHei", 12, "bold"), padding=8)
+        # Sun Valley dark theme — modern rounded UI
+        sv_ttk.set_theme("dark")
+        # Custom accent color
+        style.configure("Accent.TButton", font=("", 11, "bold"))
+        style.configure("Title.TLabel", font=("", 14, "bold"))
+        style.configure("Heading.TLabel", font=("", 10, "bold"))
+        style.configure("Success.TLabel", foreground="#4caf50")
+        style.configure("Failed.TLabel", foreground="#f44336")
+        style.configure("Big.TButton", font=("", 12, "bold"))
+        # Card-like frames
+        style.configure("Card.TLabelframe", relief="solid", borderwidth=0)
+        style.configure("Card.TLabelframe.Label", font=("", 10, "bold"))
 
         # ── Data ──
         self.monarchs: list[str] = []
@@ -261,7 +270,11 @@ class CouponApp:
 
         # Treeview
         cols = ("#", "monarch", "serialcode", "status", "message")
-        self.tree = ttk.Treeview(frm, columns=cols, show="headings", height=8)
+        style = ttk.Style()
+        style.configure("Tasks.Treeview", rowheight=28, font=("", 10))
+        style.configure("Tasks.Treeview.Heading", font=("", 10, "bold"))
+        self.tree = ttk.Treeview(frm, columns=cols, show="headings", height=8,
+                                 style="Tasks.Treeview")
         self.tree.heading("#", text="#")
         self.tree.heading("monarch", text="👤 Monarch（主公）")
         self.tree.heading("serialcode", text="🎫 Serialcode（序號）")
@@ -329,7 +342,9 @@ class CouponApp:
         log_frame.pack(fill=tk.BOTH, expand=True)
 
         self.log = scrolledtext.ScrolledText(log_frame, height=6, wrap=tk.WORD,
-                                             font=("Consolas", 9))
+                                             font=("Consolas", 10), bg="#2b2b2b",
+                                             fg="#e0e0e0", insertbackground="#e0e0e0",
+                                             relief="flat", borderwidth=0)
         self.log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Clear button
@@ -694,12 +709,16 @@ class CouponApp:
     def _open_editor(self, title, current_lines, callback):
         win = tk.Toplevel(self.root)
         win.title(f"編輯 {title}")
-        win.geometry("500x400")
+        win.geometry("520x420")
+        win.configure(bg="#1c1c1c")
         win.transient(self.root)
         win.grab_set()
 
-        txt = scrolledtext.ScrolledText(win, font=("Consolas", 11), wrap=tk.WORD)
-        txt.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        txt = scrolledtext.ScrolledText(win, font=("Consolas", 11), wrap=tk.WORD,
+                                        bg="#2b2b2b", fg="#e0e0e0",
+                                        insertbackground="#e0e0e0",
+                                        relief="flat", borderwidth=0)
+        txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
         txt.insert("1.0", "\n".join(current_lines))
 
         def save():
