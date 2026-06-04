@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>虛寶序號自動填寫工具</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 三國萌萌打</h1>
+    <h2>虛寶序號自動填寫工具</h2>
+    
+    <div class="upload-section">
+      <div class="file-upload">
+        <label for="monarchFile">📄 主公名稱 (.txt)</label>
+        <input type="file" id="monarchFile" accept=".txt">
+        <span class="file-name" id="monarchFileName">未選擇文件</span>
+      </div>
+      
+      <div class="file-upload">
+        <label for="serialFile">🎁 虛寶序號 (.txt)</label>
+        <input type="file" id="serialFile" accept=".txt">
+        <span class="file-name" id="serialFileName">未選擇文件</span>
+      </div>
+    </div>
+
+    <div class="mode-section">
+      <label>執行模式：</label>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="mode" value="oneToOne" checked>
+          <span>一對一模式</span>
+          <small>1個帳號對應1個序號</small>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="mode" value="shared">
+          <span>共用模式</span>
+          <small>所有帳號用完一個序號再換下一個</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <p><strong>伺服器：</strong>天下爭霸</p>
+      <p><strong>延遲時間：</strong>2 秒/次</p>
+    </div>
+
+    <button id="startBtn" class="start-btn" disabled>開始執行</button>
+    
+    <div id="progressSection" class="progress-section" style="display: none;">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <p id="progressText" class="progress-text">準備中...</p>
+    </div>
+
+    <div id="logSection" class="log-section" style="display: none;">
+      <h3>執行日誌</h3>
+      <div id="logContent" class="log-content"></div>
+    </div>
+
+    <button id="stopBtn" class="stop-btn" style="display: none;">停止執行</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
