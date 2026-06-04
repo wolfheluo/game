@@ -269,42 +269,28 @@ async function fillFormAndSubmit(monarch, serial, serverValue) {
   }
 }
 
-// 檢查網站的錯誤彈窗並立即關閉
-function checkAndCloseErrorModal() {
-  const modal = document.querySelector('.serialModalArea.js-serial-modal.error');
+// 檢查網站彈窗並立即關閉，透過 classList 動態判斷類型
+function checkAndCloseModal() {
+  const modal = document.querySelector('.serialModalArea.js-serial-modal');
   if (modal && modal.style.display !== 'none') {
+    const isSuccess = modal.classList.contains('success');
+    const isError = modal.classList.contains('error');
+    
+    if (!isSuccess && !isError) return { type: null, message: null };
+    
     const messageEl = modal.querySelector('.js-modal-message');
-    const message = messageEl ? messageEl.textContent.trim() : '未知錯誤';
+    const message = messageEl ? messageEl.textContent.trim() : '';
     
     // 立即點擊關閉按鈕
-    const closeBtn = modal.querySelector('.serialModal__btn.js-modal-btn');
+    const closeBtn = modal.querySelector('.js-modal-btn');
     if (closeBtn) {
-      log('🔘 檢測到錯誤彈窗，立即關閉');
-      closeBtn.click(); // 立即點擊，不延遲
-    }
-    
-    return { hasError: true, message };
-  }
-  return { hasError: false, message: null };
-}
-
-// 檢查網站的成功彈窗並立即關閉
-function checkAndCloseSuccessModal() {
-  const modal = document.querySelector('.serialModalArea.js-serial-modal.success');
-  if (modal && modal.style.display !== 'none') {
-    const messageEl = modal.querySelector('.js-modal-message');
-    const message = messageEl ? messageEl.textContent.trim() : '成功';
-    
-    // 立即點擊關閉按鈕
-    const closeBtn = modal.querySelector('.serialModal__btn.js-modal-btn');
-    if (closeBtn) {
-      log('🔘 檢測到成功彈窗，立即關閉');
+      log(`🔘 檢測到${isSuccess ? '成功' : '錯誤'}彈窗，立即關閉`);
       closeBtn.click();
     }
     
-    return { hasSuccess: true, message };
+    return { type: isSuccess ? 'success' : 'error', message };
   }
-  return { hasSuccess: false, message: null };
+  return { type: null, message: null };
 }
 
 // 等待網站回應（透過攔截 console.log 或檢查錯誤彈窗）
@@ -314,31 +300,25 @@ function waitForResponse() {
     const originalLog = console.log;
     let resolved = false;
     
-    // 設置 DOM 監聽器，一旦錯誤或成功彈窗出現就立即關閉
+    // 設置 DOM 監聽器，一旦彈窗出現就依 classList 判斷類型並關閉
     const observer = new MutationObserver((mutations) => {
-      const errorCheck = checkAndCloseErrorModal();
-      if (errorCheck.hasError && !resolved) {
+      if (resolved) return;
+      const modalCheck = checkAndCloseModal();
+      if (modalCheck.type === 'error') {
         log('⚠ 檢測到錯誤彈窗（DOM 監聽）');
-        logError(`網站錯誤彈窗: ${errorCheck.message}`);
-        lastResponse = { code: -1, message: errorCheck.message, source: 'modal' };
+        logError(`網站錯誤彈窗: ${modalCheck.message}`);
+        lastResponse = { code: -1, message: modalCheck.message, source: 'modal' };
         resolved = true;
         observer.disconnect();
         console.log = originalLog;
-        
-        // 稍微延遲 resolve，確保關閉按鈕已被點擊
         setTimeout(() => resolve(lastResponse), 200);
-        return;
-      }
-      
-      const successCheck = checkAndCloseSuccessModal();
-      if (successCheck.hasSuccess && !resolved) {
+      } else if (modalCheck.type === 'success') {
         log('✅ 檢測到成功彈窗（DOM 監聽）');
-        logSuccess(`網站成功彈窗: ${successCheck.message}`);
-        lastResponse = { code: 0, message: successCheck.message, source: 'modal' };
+        logSuccess(`網站成功彈窗: ${modalCheck.message}`);
+        lastResponse = { code: 0, message: modalCheck.message, source: 'modal' };
         resolved = true;
         observer.disconnect();
         console.log = originalLog;
-        
         setTimeout(() => resolve(lastResponse), 200);
       }
     });
@@ -359,14 +339,14 @@ function waitForResponse() {
         lastResponse = args[1];
         log('📡 捕獲到網站回應', args[1]);
         
-        // 如果有錯誤代碼，立即檢查並關閉錯誤彈窗
+        // 如果有錯誤代碼，立即檢查並關閉彈窗
         if (args[1].code !== 0) {
           setTimeout(() => {
-            const errorCheck = checkAndCloseErrorModal();
-            if (errorCheck.hasError) {
+            const modalCheck = checkAndCloseModal();
+            if (modalCheck.type === 'error') {
               log('⚠ 根據回應代碼檢測到錯誤彈窗');
-              logError(`網站錯誤彈窗: ${errorCheck.message}`);
-              lastResponse = { code: -1, message: errorCheck.message, source: 'modal' };
+              logError(`網站錯誤彈窗: ${modalCheck.message}`);
+              lastResponse = { code: -1, message: modalCheck.message, source: 'modal' };
             }
           }, 100);
         }
@@ -386,24 +366,21 @@ function waitForResponse() {
         console.log = originalLog;
         observer.disconnect();
         
-        // 最後檢查一次錯誤或成功彈窗
-        const errorCheck = checkAndCloseErrorModal();
-        if (errorCheck.hasError) {
+        // 最後檢查一次彈窗，依 classList 判斷類型
+        const modalCheck = checkAndCloseModal();
+        if (modalCheck.type === 'error') {
           log('⚠ 檢測到錯誤彈窗（超時檢查）');
-          logError(`網站錯誤彈窗: ${errorCheck.message}`);
-          lastResponse = { code: -1, message: errorCheck.message, source: 'modal' };
+          logError(`網站錯誤彈窗: ${modalCheck.message}`);
+          lastResponse = { code: -1, message: modalCheck.message, source: 'modal' };
+          resolve(lastResponse);
+        } else if (modalCheck.type === 'success') {
+          log('✅ 檢測到成功彈窗（超時檢查）');
+          logSuccess(`網站成功彈窗: ${modalCheck.message}`);
+          lastResponse = { code: 0, message: modalCheck.message, source: 'modal' };
           resolve(lastResponse);
         } else {
-          const successCheck = checkAndCloseSuccessModal();
-          if (successCheck.hasSuccess) {
-            log('✅ 檢測到成功彈窗（超時檢查）');
-            logSuccess(`網站成功彈窗: ${successCheck.message}`);
-            lastResponse = { code: 0, message: successCheck.message, source: 'modal' };
-            resolve(lastResponse);
-          } else {
-            log('⚠ 等待回應超時（3秒），未檢測到任何彈窗');
-            resolve(null);
-          }
+          log('⚠ 等待回應超時（3秒），未檢測到任何彈窗');
+          resolve(null);
         }
       }
     }, 3000);
