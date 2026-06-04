@@ -1,0 +1,80 @@
+POST /register-coupon HTTP/1.1
+Host: coupon.kingdom-story.com
+Content-Length: 74
+Sec-Ch-Ua-Platform: "Windows"
+Accept-Language: zh-TW,zh;q=0.9
+Sec-Ch-Ua: "Not=A?Brand";v="24", "Chromium";v="140"
+Sec-Ch-Ua-Mobile: ?0
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36
+Accept: */*
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: https://coupon.kingdom-story.com
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: https://coupon.kingdom-story.com/lang/zh-TW
+Accept-Encoding: gzip, deflate, br
+Priority: u=1, i
+Connection: keep-alive
+
+server=10&monarch=%E7%84%A1%E9%9B%99%E6%88%B0%E5%B8%9D&serialcode=sunny266
+
+
+---成功兌換-----
+HTTP/1.1 200 OK
+Server: nginx/1.18.0 (Ubuntu)
+Date: Thu, 04 Jun 2026 18:42:27 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 10
+Connection: keep-alive
+X-Powered-By: Express
+ETag: W/"a-D9UxFBmaGkbohwMrfvoF8f10yAc"
+
+{"code":0}
+---
+
+
+
+---已經使用過的回應---
+HTTP/1.1 200 OK
+Server: nginx/1.18.0 (Ubuntu)
+Date: Thu, 04 Jun 2026 18:43:15 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 11
+Connection: keep-alive
+X-Powered-By: Express
+ETag: W/"b-XHJ9q8Gp0KwA/+WqG2h9h9noqOU"
+
+{"code":72}
+------------------
+
+---錯誤表---
+
+<script type="text/javascript">
+	$(document).ready(function(){
+
+		$.LANG = {
+			"statuscode-0": "success",
+			"resultcode-0": "道具已發送。請於遊戲內信箱確認。",
+			"resultcode-11": "語言錯誤",
+			"target-11": "serialcode",
+			"resultcode-21": "服務器錯誤",
+			"target-21": "serialcode",
+			"resultcode-31": "主公名稱輸入錯誤。",
+			"target-31": "monarch",
+			"resultcode-32": "該帳戶已退出",
+			"target-32": "monarch",
+			"resultcode-72": "已使用過的虛寶序號。",
+			"target-72": "serialcode",
+			"resultcode-81": "無更多兌換碼",
+			"target-81": "serialcode",
+			"resultcode-82": "兌換碼過期",
+			"target-82": "serialcode",
+			"resultcode-84": "錯誤的虛寶序號。",
+			"target-84": "serialcode",
+			"resultcode-98": "Please access from the coupon page. (https://kingdom-story.com/coupon)",
+			"resultcode-99": "其他錯誤",
+			"systemerror": "發生錯誤，請稍後再試。若持續發生錯誤，請向遊戲內的客服中心聯繫。",
+		};
+	});
