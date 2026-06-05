@@ -899,6 +899,11 @@ class CouponApp:
             txt.configure(bg="#2b2b2b", fg="#e0e0e0", insertbackground="#e0e0e0")
             win.configure(bg="#1c1c1c")
 
+        def save():
+            lines = [ln.strip() for ln in txt.get("1.0", tk.END).splitlines() if ln.strip()]
+            callback(lines)
+            win.destroy()
+
         # Buttons at bottom-right — packed first so they always get space
         btn_frame = ttk.Frame(win)
         btn_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(6, 12))
@@ -908,11 +913,6 @@ class CouponApp:
         # Text area fills remaining space above buttons
         txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=(12, 0))
         txt.insert("1.0", "\n".join(current_lines))
-
-        def save():
-            lines = [ln.strip() for ln in txt.get("1.0", tk.END).splitlines() if ln.strip()]
-            callback(lines)
-            win.destroy()
 
 
 def main():
