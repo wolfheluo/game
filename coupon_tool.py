@@ -904,9 +904,9 @@ class CouponApp:
             callback(lines)
             win.destroy()
 
-        # Buttons at bottom-right — packed first so they always get space
-        btn_frame = ttk.Frame(win)
-        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(6, 12))
+        # Buttons at bottom-right
+        btn_frame = ttk.Frame(win, style="TFrame")
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=12)
         ttk.Button(btn_frame, text="取消", command=win.destroy).pack(side=tk.RIGHT, padx=4)
         ttk.Button(btn_frame, text="💾 儲存", command=save).pack(side=tk.RIGHT, padx=4)
 
