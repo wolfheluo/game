@@ -472,10 +472,9 @@ class CouponApp:
         self._log_widget = self.log
         self.log.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Clear button
+        # Log line count
         btn_frame = ttk.Frame(frm)
         btn_frame.pack(fill=tk.X, pady=(4, 0))
-        ttk.Button(btn_frame, text="🗑️ 清除日誌", command=self._clear_log).pack(side=tk.RIGHT)
         self.lbl_log_count = ttk.Label(btn_frame, text="", foreground="#555555")
         self.lbl_log_count.pack(side=tk.LEFT)
 
@@ -796,10 +795,6 @@ class CouponApp:
         self.log.see(tk.END)
         self._update_log_count()
 
-    def _clear_log(self):
-        self.log.delete("1.0", tk.END)
-        self._update_log_count()
-
     def _update_log_count(self):
         lines = int(self.log.index("end-1c").split(".")[0]) - 1
         self.lbl_log_count.config(text=f"共 {max(0, lines)} 行")
@@ -905,18 +900,21 @@ class CouponApp:
         if self.theme.get() == "dark":
             txt.configure(bg="#2b2b2b", fg="#e0e0e0", insertbackground="#e0e0e0")
             win.configure(bg="#1c1c1c")
-        txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+
+        # Buttons at top — always visible
+        btn_frame = ttk.Frame(win)
+        btn_frame.pack(fill=tk.X, padx=12, pady=(12, 6))
+        ttk.Button(btn_frame, text="取消", command=win.destroy).pack(side=tk.RIGHT, padx=4)
+        ttk.Button(btn_frame, text="💾 儲存", command=save).pack(side=tk.RIGHT, padx=4)
+
+        # Text area fills remaining space
+        txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
         txt.insert("1.0", "\n".join(current_lines))
 
         def save():
             lines = [ln.strip() for ln in txt.get("1.0", tk.END).splitlines() if ln.strip()]
             callback(lines)
             win.destroy()
-
-        btn_frame = ttk.Frame(win)
-        btn_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
-        ttk.Button(btn_frame, text="儲存", command=save).pack(side=tk.RIGHT, padx=4)
-        ttk.Button(btn_frame, text="取消", command=win.destroy).pack(side=tk.RIGHT, padx=4)
 
 
 def main():
