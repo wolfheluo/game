@@ -293,15 +293,13 @@ class CouponApp:
         self.monarchs: list[str] = []
         self.serialcodes: list[str] = []
         self.tasks: list[CouponTask] = []
-        self.mode = tk.StringVar(value="one2one")
+        self.mode = tk.StringVar(value="")
         self.running = False
         self.stop_flag = threading.Event()
         self._executor: ThreadPoolExecutor | None = None
         self._result_queue = queue.Queue()
 
         # ── Restore config ──
-        if "mode" in self._config:
-            self.mode.set(self._config["mode"])
         worker_cfg = self._config.get("worker_count", DEFAULT_WORKERS)
 
         # ── Build UI ──
@@ -901,14 +899,14 @@ class CouponApp:
             txt.configure(bg="#2b2b2b", fg="#e0e0e0", insertbackground="#e0e0e0")
             win.configure(bg="#1c1c1c")
 
-        # Buttons at top — always visible
+        # Buttons at bottom-right — packed first so they always get space
         btn_frame = ttk.Frame(win)
-        btn_frame.pack(fill=tk.X, padx=12, pady=(12, 6))
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(6, 12))
         ttk.Button(btn_frame, text="取消", command=win.destroy).pack(side=tk.RIGHT, padx=4)
         ttk.Button(btn_frame, text="💾 儲存", command=save).pack(side=tk.RIGHT, padx=4)
 
-        # Text area fills remaining space
-        txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
+        # Text area fills remaining space above buttons
+        txt.pack(fill=tk.BOTH, expand=True, padx=12, pady=(12, 0))
         txt.insert("1.0", "\n".join(current_lines))
 
         def save():
